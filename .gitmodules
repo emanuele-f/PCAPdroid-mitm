@@ -1,0 +1,3 @@
+[submodule "submodules/chaquopy-wheels"]
+	path = submodules/chaquopy-wheels
+	url = https://github.com/emanuele-f/chaquopy-wheels

@@ -1,0 +1,19 @@
+# https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore
+
+# Generated files
+.idea/
+.gradle
+
+# Gradle and Maven with auto-import
+*.iml
+*.ipr
+
+# Other
+local.properties
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx
+app/release/
+app/debug/

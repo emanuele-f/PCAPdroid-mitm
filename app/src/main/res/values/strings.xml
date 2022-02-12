@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PCAPdroid mitm</string>
+    <string name="mitm_permission_label">control the mitm service</string>
+    <string name="mitm_permission_descr">control the mitm service to decrypt the SSL/TLS traffic of the device</string>
+</resources>
