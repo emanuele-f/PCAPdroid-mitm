@@ -22,7 +22,9 @@ from mitmproxy import options
 from mitmproxy.tools import dump, cmdline
 from mitmproxy.tools.main import mitmdump, process_options
 from mitmproxy.certs import CertStore, Cert
+from pcapdroid import PCAPdroid
 from pathlib import Path
+import socket
 import asyncio
 import typing
 import sys
@@ -37,40 +39,43 @@ builtins.print = lambda x: sys.stdout.write(str(x))
 
 master = None
 
-# From mitmproxy.tools.main.run
+# Entrypoint: runs mitmproxy
+# From mitmproxy.tools.main.run, without the signal handlers
 def run(fd: int, port: int):
-    # see also: ssl_insecure
-    arguments = f"-q -p {port} --mode socks5 --listen-host 127.0.0.1".split()
-
     global master
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
-    opts = options.Options()
-    master = dump.DumpMaster(opts)
+    # see also: ssl_insecure
+    arguments = f"-q --mode socks5 --listen-host 127.0.0.1 -p {port}".split()
 
-    parser = cmdline.mitmdump(opts)
-    args = parser.parse_args(arguments)
-    process_options(parser, opts, args)
+    try:
+        with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-    checkCertificate()
+            opts = options.Options()
+            master = dump.DumpMaster(opts)
 
-    # Load the PCAPdroid addon
-    # TODO load at start, don't connect in the constructor
-    from pcapdroid import PCAPdroid
-    master.addons.add(PCAPdroid(fd))
+            parser = cmdline.mitmdump(opts)
+            args = parser.parse_args(arguments)
+            process_options(parser, opts, args)
+            checkCertificate()
 
-    print("Running mitmdump...")
-    master.run()
+            master.addons.add(PCAPdroid(sock))
 
-    proxyserver = master.addons.lookup.get("proxyserver")
-    if proxyserver:
-        # The proxyserver is not stopped by master.shutdown. Must be
-        # stopped to properly close the TCP socket.
-        asyncio.run(proxyserver.shutdown_server())
+            print("Running mitmdump...")
+            master.run()
 
-    print("mitmdump stopped")
+            # The proxyserver is not stopped by master.shutdown. Must be
+            # stopped to properly close the TCP socket.
+            proxyserver = master.addons.lookup.get("proxyserver")
+            if proxyserver:
+                asyncio.run(proxyserver.shutdown_server())
 
+            print("mitmdump stopped")
+    except socket.error as e:
+        print(e)
+
+# Entrypoint: stops the running mitmproxy
 def stop():
     if master:
         print("Stopping mitmdump...")
@@ -93,6 +98,7 @@ def checkCertificate():
     print("Generating certificates...")
     CertStore.create_store(Path(MITMPROXY_CONF_DIR), "mitmproxy", 2048, "PCAPdroid", "PCAPdroid CA")
 
+# Entrypoint: returns the mitmproxy CA certificate PEM
 def getCAcert() -> str:
     checkCertificate()
 

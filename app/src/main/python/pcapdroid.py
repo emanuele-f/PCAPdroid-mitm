@@ -18,13 +18,12 @@
 #  Copyright 2022 - Emanuele Faranda
 #
 
-# example usage: mitmdump -q -p 8050 --mode socks5 -s pcapdroid.py
-from enum import Enum
 import socket
 import errno
 import mitmproxy
 from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
+from enum import Enum
 
 class PayloadType(Enum):
   HTTP_REQUEST = "http_req"
@@ -33,13 +32,8 @@ class PayloadType(Enum):
   WEBSOCKET_SERVER_MSG = "ws_srvmsg"
 
 class PCAPdroid:
-  def __init__(self, fd: int):
-    try:
-      self.sock = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
-      #self.sock.connect(("127.0.0.1", 5750))
-    except socket.error as e:
-      ctx.log.error(e)
-      ctx.master.shutdown()
+  def __init__(self, sock: socket.socket):
+    self.sock = sock
 
   def send_payload(self, flow: http.HTTPFlow, payload_type: PayloadType, payload):
     client_port = flow.client_conn.peername[1]
@@ -75,7 +69,3 @@ class PCAPdroid:
 
     payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
     self.send_payload(flow, payload_type, msg.content)
-
-#addons = [
-#  PCAPdroid()
-#]

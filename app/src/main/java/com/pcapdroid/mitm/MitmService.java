@@ -109,17 +109,19 @@ public class MitmService extends Service implements Runnable {
 
     @Override
     public void run() {
-        mitm.callAttr("run", mFd.getFd(), mProxyPort);
-
         try {
-            mFd.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            mitm.callAttr("run", mFd.getFd(), mProxyPort);
+        } finally {
+            try {
+                mFd.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
-        Log.d(TAG, "Done");
-        mFd = null;
-        mThread = null;
+            Log.d(TAG, "Done");
+            mFd = null;
+            mThread = null;
+        }
     }
 
     private void _stop() {
