@@ -21,11 +21,14 @@ package com.pcapdroid.mitm;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
 import android.util.Log;
 
 import com.chaquo.python.PyObject;
@@ -68,6 +71,12 @@ public class MitmService extends Service implements Runnable {
                     } else
                         Log.w(TAG, "Thread already active");
                     break;
+                case MitmAddon.MSG_GET_CA_CERTIFICATE:
+                    if(mThread == null)
+                        handleGetCaCertificate(msg.replyTo);
+                    else
+                        Log.w(TAG, "Not supported while mitm running");
+                    break;
                 default:
                     super.handleMessage(msg);
             }
@@ -104,5 +113,26 @@ public class MitmService extends Service implements Runnable {
         mitm.callAttr("run", mFd.getFd(), mProxyPort);
 
         Log.d(TAG, "Done");
+    }
+
+    public void handleGetCaCertificate(Messenger replyTo) {
+        String cert = null;
+
+        PyObject pyres = mitm.callAttr("getCAcert");
+        if(pyres != null)
+            cert = pyres.toJava(String.class);
+
+        if(replyTo != null) {
+            Bundle bundle = new Bundle();
+            bundle.putString(MitmAddon.CERTIFICATE_RESULT, cert);
+            Message msg = Message.obtain(null, MitmAddon.MSG_GET_CA_CERTIFICATE);
+            msg.setData(bundle);
+
+            try {
+                replyTo.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

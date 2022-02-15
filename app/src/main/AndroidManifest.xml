@@ -26,9 +26,5 @@
             android:name=".MitmService"
             android:exported="true"
             tools:ignore="ExportedService" />
-
-        <activity
-            android:name=".MitmCtrl"
-            android:exported="true" />
     </application>
 </manifest>

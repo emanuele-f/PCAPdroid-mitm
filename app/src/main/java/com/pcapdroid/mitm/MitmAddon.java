@@ -25,9 +25,6 @@ public class MitmAddon {
 
     public static final String MITM_SERVICE = PACKAGE_NAME + ".MitmService";
     public static final int MSG_START_MITM = 1;
-
-    public static final String CONTROL_ACTIVITY = PACKAGE_NAME + ".MitmCtrl";
-    public static final String ACTION_EXTRA = "action";
-    public static final String ACTION_GET_CA_CERTIFICATE = "getCAcert";
+    public static final int MSG_GET_CA_CERTIFICATE = 2;
     public static final String CERTIFICATE_RESULT = "certificate";
 }
