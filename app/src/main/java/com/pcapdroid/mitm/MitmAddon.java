@@ -19,6 +19,7 @@
 
 package com.pcapdroid.mitm;
 
+/* API to integrate MitmAddon */
 public class MitmAddon {
     public static final String PACKAGE_NAME = "com.pcapdroid.mitm";
     public static final String MITM_PERMISSION = "com.pcapdroid.permission.MITM";

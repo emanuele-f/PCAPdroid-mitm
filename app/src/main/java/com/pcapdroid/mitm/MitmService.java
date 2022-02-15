@@ -26,13 +26,15 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
 
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
+
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 
 public class MitmService extends Service implements Runnable {
     static final String TAG = "Mitmproxy";
@@ -46,7 +48,6 @@ public class MitmService extends Service implements Runnable {
     public void onCreate() {
         Python py = Python.getInstance();
         mitm = py.getModule("mitm");
-        Log.d(TAG, "mitm module: " + mitm);
 
         super.onCreate();
     }
@@ -57,41 +58,68 @@ public class MitmService extends Service implements Runnable {
         super.onDestroy();
     }
 
-    class IncomingHandler extends Handler {
+    static class IncomingHandler extends Handler {
+        final WeakReference<MitmService> mReference;
+
+        public IncomingHandler(MitmService service) {
+            mReference = new WeakReference<>(service);
+        }
+
         @Override
         public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MitmAddon.MSG_START_MITM:
-                    mProxyPort = msg.arg1;
-                    mFd = (ParcelFileDescriptor)msg.obj;
-
-                    if(mThread == null) {
-                        mThread = new Thread(MitmService.this);
-                        mThread.start();
-                    } else
-                        Log.w(TAG, "Thread already active");
-                    break;
-                case MitmAddon.MSG_GET_CA_CERTIFICATE:
-                    if(mThread == null)
-                        handleGetCaCertificate(msg.replyTo);
-                    else
-                        Log.w(TAG, "Not supported while mitm running");
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
+            MitmService instance = mReference.get();
+            if(instance != null)
+                instance.handleMessage(msg);
         }
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        mMessenger = new Messenger(new IncomingHandler());
+        mMessenger = new Messenger(new IncomingHandler(this));
         return mMessenger.getBinder();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_NOT_STICKY;
+    }
+
+    private void handleMessage(Message msg) {
+        switch (msg.what) {
+            case MitmAddon.MSG_START_MITM:
+                mProxyPort = msg.arg1;
+                mFd = (ParcelFileDescriptor)msg.obj;
+
+                if(mThread == null) {
+                    mThread = new Thread(MitmService.this);
+                    mThread.start();
+                } else
+                    Log.w(TAG, "Thread already active");
+                break;
+            case MitmAddon.MSG_GET_CA_CERTIFICATE:
+                if(mThread == null)
+                    handleGetCaCertificate(msg.replyTo);
+                else
+                    Log.w(TAG, "Not supported while mitm running");
+                break;
+            default:
+                Log.w(TAG, "Unknown message: " + msg.what);
+        }
+    }
+
+    @Override
+    public void run() {
+        mitm.callAttr("run", mFd.getFd(), mProxyPort);
+
+        try {
+            mFd.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Log.d(TAG, "Done");
+        mFd = null;
+        mThread = null;
     }
 
     private void _stop() {
@@ -106,13 +134,6 @@ public class MitmService extends Service implements Runnable {
         }
 
         stopSelf();
-    }
-
-    @Override
-    public void run() {
-        mitm.callAttr("run", mFd.getFd(), mProxyPort);
-
-        Log.d(TAG, "Done");
     }
 
     public void handleGetCaCertificate(Messenger replyTo) {
