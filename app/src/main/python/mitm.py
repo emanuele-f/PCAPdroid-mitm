@@ -24,6 +24,7 @@ from mitmproxy.tools.main import mitmdump, process_options
 from mitmproxy.certs import CertStore, Cert
 from pcapdroid import PCAPdroid
 from pathlib import Path
+import mitmproxy
 import socket
 import asyncio
 import typing
@@ -60,7 +61,16 @@ def run(fd: int, port: int):
             process_options(parser, opts, args)
             checkCertificate()
 
-            master.addons.add(PCAPdroid(sock))
+            pcapdroid = PCAPdroid(sock)
+            master.addons.add(pcapdroid)
+
+            # dirty hack for mitmproxy v7, TODO use the tls_failed_client hook when the next mitmproxy version is released
+            def on_handshake_error(layer: mitmproxy.proxy.layers.tls._TLSLayer, err: str):
+                if isinstance(layer, mitmproxy.proxy.layers.tls.ClientTLSLayer):
+                    pcapdroid.tls_failed_client(layer, err)
+                return mitmproxy.proxy.tunnel.TunnelLayer.on_handshake_error(layer, err)
+
+            mitmproxy.proxy.layers.tls._TLSLayer.on_handshake_error = on_handshake_error
 
             print("Running mitmdump...")
             master.run()

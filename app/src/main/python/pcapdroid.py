@@ -26,8 +26,11 @@ from mitmproxy.net.http.http1.assemble import assemble_request, assemble_respons
 from enum import Enum
 
 class PayloadType(Enum):
+  TLS_ERROR = "tls_err"
   HTTP_REQUEST = "http_req"
   HTTP_REPLY = "http_rep"
+  TCP_CLIENT_MSG = "tcp_climsg"
+  TCP_SERVER_MSG = "tcp_srvmsg"
   WEBSOCKET_CLIENT_MSG = "ws_climsg"
   WEBSOCKET_SERVER_MSG = "ws_srvmsg"
 
@@ -35,8 +38,8 @@ class PCAPdroid:
   def __init__(self, sock: socket.socket):
     self.sock = sock
 
-  def send_payload(self, flow: http.HTTPFlow, payload_type: PayloadType, payload):
-    client_port = flow.client_conn.peername[1]
+  def send_payload(self, client_conn: mitmproxy.connection.Client, payload_type: PayloadType, payload):
+    client_port = client_conn.peername[1]
     header = "%u:%s:%u\n" % (client_port, payload_type.value, len(payload))
     #ctx.log.debug(header)
 
@@ -53,14 +56,19 @@ class PCAPdroid:
 
   def request(self, flow: http.HTTPFlow):
     if flow.request:
-      self.send_payload(flow, PayloadType.HTTP_REQUEST, assemble_request(flow.request))
+      self.send_payload(flow.client_conn, PayloadType.HTTP_REQUEST, assemble_request(flow.request))
 
   def response(self, flow: http.HTTPFlow) -> None:
     if flow.response:
-      self.send_payload(flow, PayloadType.HTTP_REPLY, assemble_response(flow.response))
+      self.send_payload(flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
 
-  def log(self, entry: mitmproxy.log.LogEntry):
-    print("[%s] %s" % (entry.level, entry.msg))
+  def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
+    msg = flow.messages[-1]
+    if not msg:
+       return
+
+    payload_type = PayloadType.TCP_CLIENT_MSG if msg.from_client else PayloadType.TCP_SERVER_MSG
+    self.send_payload(flow.client_conn, payload_type, msg.content)
 
   def websocket_message(self, flow: http.HTTPFlow):
     msg = flow.websocket.messages[-1]
@@ -68,4 +76,10 @@ class PCAPdroid:
       return
 
     payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
-    self.send_payload(flow, payload_type, msg.content)
+    self.send_payload(flow.client_conn, payload_type, msg.content)
+
+  def tls_failed_client(self, layer: mitmproxy.proxy.layers.tls.ClientTLSLayer, err: str):
+      self.send_payload(layer.context.client, PayloadType.TLS_ERROR, err.encode("ascii"))
+
+  def log(self, entry: mitmproxy.log.LogEntry):
+      print("[%s] %s" % (entry.level, entry.msg))
