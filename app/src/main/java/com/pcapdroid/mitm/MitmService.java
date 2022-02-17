@@ -96,11 +96,22 @@ public class MitmService extends Service implements Runnable {
                 } else
                     Log.w(TAG, "Thread already active");
                 break;
+            case MitmAddon.MSG_STOP_MITM:
+                // NOTE: sometimes the thread gets stuck even if the fd is closed from the remote
+                // side. In such a case, this command allows us to go on
+                if(mThread != null) {
+                    Log.i(TAG, "Stopping running thread");
+                    mThread.interrupt();
+                    mThread = null;
+                }
+                break;
             case MitmAddon.MSG_GET_CA_CERTIFICATE:
                 if(mThread == null)
                     handleGetCaCertificate(msg.replyTo);
-                else
+                else {
                     Log.w(TAG, "Not supported while mitm running");
+                    replyWithError(msg.replyTo);
+                }
                 break;
             default:
                 Log.w(TAG, "Unknown message: " + msg.what);
@@ -138,7 +149,7 @@ public class MitmService extends Service implements Runnable {
         stopSelf();
     }
 
-    public void handleGetCaCertificate(Messenger replyTo) {
+    private void handleGetCaCertificate(Messenger replyTo) {
         String cert = null;
 
         PyObject pyres = mitm.callAttr("getCAcert");
@@ -156,6 +167,18 @@ public class MitmService extends Service implements Runnable {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void replyWithError(Messenger replyTo) {
+        if(replyTo == null)
+            return;
+
+        Message msg = Message.obtain(null, MitmAddon.MSG_ERROR);
+        try {
+            replyTo.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 }

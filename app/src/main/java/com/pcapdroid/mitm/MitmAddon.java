@@ -25,7 +25,9 @@ public class MitmAddon {
     public static final String MITM_PERMISSION = "com.pcapdroid.permission.MITM";
 
     public static final String MITM_SERVICE = PACKAGE_NAME + ".MitmService";
+    public static final int MSG_ERROR = -1;
     public static final int MSG_START_MITM = 1;
     public static final int MSG_GET_CA_CERTIFICATE = 2;
+    public static final int MSG_STOP_MITM = 3;
     public static final String CERTIFICATE_RESULT = "certificate";
 }
