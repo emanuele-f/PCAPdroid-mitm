@@ -33,6 +33,9 @@ import android.util.Log;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
@@ -113,6 +116,9 @@ public class MitmService extends Service implements Runnable {
                     replyWithError(msg.replyTo);
                 }
                 break;
+            case MitmAddon.MSG_GET_SSLKEYLOG:
+                handleGetSslkeylog(msg.replyTo);
+                break;
             default:
                 Log.w(TAG, "Unknown message: " + msg.what);
         }
@@ -167,6 +173,39 @@ public class MitmService extends Service implements Runnable {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void handleGetSslkeylog(Messenger replyTo) {
+        // sync with mitm.py
+        File sslkeylog = new File(getFilesDir() + "/.mitmproxy/sslkeylogfile.txt");
+        byte[] rv = null;
+
+        try(FileInputStream in = new FileInputStream(sslkeylog)) {
+            byte[] bytes = new byte[(int) sslkeylog.length()];
+            int idx = 0;
+
+            while(idx < bytes.length) {
+                int bytesRead = in.read(bytes, idx, bytes.length - idx);
+                if(bytesRead <= 0)
+                    break;
+                idx += bytesRead;
+            }
+
+            rv = bytes;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Bundle bundle = new Bundle();
+        bundle.putByteArray(MitmAddon.SSLKEYLOG_RESULT, rv);
+        Message msg = Message.obtain(null, MitmAddon.MSG_GET_SSLKEYLOG);
+        msg.setData(bundle);
+
+        try {
+            replyTo.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 

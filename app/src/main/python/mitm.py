@@ -18,6 +18,14 @@
 #  Copyright 2022 - Emanuele Faranda
 #
 
+import os
+
+MITMPROXY_CONF_DIR = os.environ["HOME"] + "/.mitmproxy"
+CA_CERT_PATH = MITMPROXY_CONF_DIR + "/mitmproxy-ca-cert.cer"
+
+# must be set before importing mitmproxy - sync with handleGetSslkeylog
+os.environ["SSLKEYLOGFILE"] = MITMPROXY_CONF_DIR + "/sslkeylogfile.txt"
+
 from mitmproxy import options
 from mitmproxy.tools import dump, cmdline
 from mitmproxy.tools.main import mitmdump, process_options
@@ -29,12 +37,8 @@ import socket
 import asyncio
 import typing
 import sys
-import os
 
-MITMPROXY_CONF_DIR = os.environ["HOME"] + "/.mitmproxy"
-CA_CERT_PATH = MITMPROXY_CONF_DIR + "/mitmproxy-ca-cert.cer"
-
-# no extra newline
+# no extra newline in logcat
 import builtins
 builtins.print = lambda x: sys.stdout.write(str(x))
 
