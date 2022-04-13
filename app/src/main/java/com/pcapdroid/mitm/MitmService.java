@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.ParcelFileDescriptor;
@@ -35,9 +36,10 @@ import com.chaquo.python.Python;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+
+import com.pcapdroid.mitm.MitmAPI.MitmConfig;
 
 public class MitmService extends Service implements Runnable {
     static final String TAG = "Mitmproxy";
@@ -45,7 +47,7 @@ public class MitmService extends Service implements Runnable {
     ParcelFileDescriptor mFd;
     Thread mThread;
     PyObject mitm;
-    int mProxyPort;
+    MitmConfig mConf;
 
     @Override
     public void onCreate() {
@@ -64,7 +66,8 @@ public class MitmService extends Service implements Runnable {
     static class IncomingHandler extends Handler {
         final WeakReference<MitmService> mReference;
 
-        public IncomingHandler(MitmService service) {
+        public IncomingHandler(Looper looper, MitmService service) {
+            super(looper);
             mReference = new WeakReference<>(service);
         }
 
@@ -78,7 +81,7 @@ public class MitmService extends Service implements Runnable {
 
     @Override
     public IBinder onBind(Intent intent) {
-        mMessenger = new Messenger(new IncomingHandler(this));
+        mMessenger = new Messenger(new IncomingHandler(getMainLooper(),this));
         return mMessenger.getBinder();
     }
 
@@ -89,9 +92,9 @@ public class MitmService extends Service implements Runnable {
 
     private void handleMessage(Message msg) {
         switch (msg.what) {
-            case MitmAddon.MSG_START_MITM:
-                mProxyPort = msg.arg1;
-                mFd = (ParcelFileDescriptor)msg.obj;
+            case MitmAPI.MSG_START_MITM:
+                mFd = (ParcelFileDescriptor) msg.obj;
+                mConf = (MitmConfig) msg.getData().getSerializable(MitmAPI.MITM_CONFIG);
 
                 if(mThread == null) {
                     mThread = new Thread(MitmService.this);
@@ -99,7 +102,7 @@ public class MitmService extends Service implements Runnable {
                 } else
                     Log.w(TAG, "Thread already active");
                 break;
-            case MitmAddon.MSG_STOP_MITM:
+            case MitmAPI.MSG_STOP_MITM:
                 // NOTE: sometimes the thread gets stuck even if the fd is closed from the remote
                 // side. In such a case, this command allows us to go on
                 if(mThread != null) {
@@ -108,7 +111,7 @@ public class MitmService extends Service implements Runnable {
                     mThread = null;
                 }
                 break;
-            case MitmAddon.MSG_GET_CA_CERTIFICATE:
+            case MitmAPI.MSG_GET_CA_CERTIFICATE:
                 if(mThread == null)
                     handleGetCaCertificate(msg.replyTo);
                 else {
@@ -116,7 +119,7 @@ public class MitmService extends Service implements Runnable {
                     replyWithError(msg.replyTo);
                 }
                 break;
-            case MitmAddon.MSG_GET_SSLKEYLOG:
+            case MitmAPI.MSG_GET_SSLKEYLOG:
                 handleGetSslkeylog(msg.replyTo);
                 break;
             default:
@@ -124,10 +127,25 @@ public class MitmService extends Service implements Runnable {
         }
     }
 
+    private String getMitmproxyArgs() {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("-q --mode socks5 --listen-host 127.0.0.1 -p ");
+        builder.append(mConf.proxyPort);
+
+        if(mConf.sslInsecure)
+            builder.append(" --ssl-insecure");
+
+        return builder.toString();
+    }
+
     @Override
     public void run() {
+        String args = getMitmproxyArgs();
+        Log.d(TAG, "mitmdump " + args);
+
         try {
-            mitm.callAttr("run", mFd.getFd(), mProxyPort);
+            mitm.callAttr("run", mFd.getFd(), args);
         } finally {
             try {
                 mFd.close();
@@ -137,6 +155,7 @@ public class MitmService extends Service implements Runnable {
 
             Log.d(TAG, "Done");
             mFd = null;
+            mConf = null;
             mThread = null;
         }
     }
@@ -164,8 +183,8 @@ public class MitmService extends Service implements Runnable {
 
         if(replyTo != null) {
             Bundle bundle = new Bundle();
-            bundle.putString(MitmAddon.CERTIFICATE_RESULT, cert);
-            Message msg = Message.obtain(null, MitmAddon.MSG_GET_CA_CERTIFICATE);
+            bundle.putString(MitmAPI.CERTIFICATE_RESULT, cert);
+            Message msg = Message.obtain(null, MitmAPI.MSG_GET_CA_CERTIFICATE);
             msg.setData(bundle);
 
             try {
@@ -198,8 +217,8 @@ public class MitmService extends Service implements Runnable {
         }
 
         Bundle bundle = new Bundle();
-        bundle.putByteArray(MitmAddon.SSLKEYLOG_RESULT, rv);
-        Message msg = Message.obtain(null, MitmAddon.MSG_GET_SSLKEYLOG);
+        bundle.putByteArray(MitmAPI.SSLKEYLOG_RESULT, rv);
+        Message msg = Message.obtain(null, MitmAPI.MSG_GET_SSLKEYLOG);
         msg.setData(bundle);
 
         try {
@@ -213,7 +232,7 @@ public class MitmService extends Service implements Runnable {
         if(replyTo == null)
             return;
 
-        Message msg = Message.obtain(null, MitmAddon.MSG_ERROR);
+        Message msg = Message.obtain(null, MitmAPI.MSG_ERROR);
         try {
             replyTo.send(msg);
         } catch (RemoteException e) {

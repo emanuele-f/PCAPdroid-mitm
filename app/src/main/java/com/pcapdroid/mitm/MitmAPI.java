@@ -19,8 +19,12 @@
 
 package com.pcapdroid.mitm;
 
+import android.os.ParcelFileDescriptor;
+
+import java.io.Serializable;
+
 /* API to integrate MitmAddon */
-public class MitmAddon {
+public class MitmAPI {
     public static final String PACKAGE_NAME = "com.pcapdroid.mitm";
     public static final String MITM_PERMISSION = "com.pcapdroid.permission.MITM";
 
@@ -30,6 +34,12 @@ public class MitmAddon {
     public static final int MSG_GET_CA_CERTIFICATE = 2;
     public static final int MSG_STOP_MITM = 3;
     public static final int MSG_GET_SSLKEYLOG = 4;
+    public static final String MITM_CONFIG = "mitm_config";
     public static final String CERTIFICATE_RESULT = "certificate";
     public static final String SSLKEYLOG_RESULT = "sslkeylog";
+
+    public static final class MitmConfig implements Serializable {
+        public int proxyPort;              // the SOCKS5 port to use to accept mitm-ed connections
+        public boolean sslInsecure;        // true to disable upstream certificate check
+    }
 }

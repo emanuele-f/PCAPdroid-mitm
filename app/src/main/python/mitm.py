@@ -46,13 +46,8 @@ master = None
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, port: int):
+def run(fd: int, mitm_args: str):
     global master
-
-    # NOTE upstream certificate verification is disabled because the app has no way to let the user
-    # accept a given cert. Moreover, it provides a workaround for a bug with HTTPS proxies described in
-    # https://github.com/mitmproxy/mitmproxy/issues/5109
-    arguments = f"-q --mode socks5 --listen-host 127.0.0.1 -p {port} --ssl-insecure".split()
 
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -63,7 +58,8 @@ def run(fd: int, port: int):
             master = dump.DumpMaster(opts)
 
             parser = cmdline.mitmdump(opts)
-            args = parser.parse_args(arguments)
+            args = parser.parse_args(mitm_args.split())
+            print(args)
             process_options(parser, opts, args)
             checkCertificate()
 
