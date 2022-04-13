@@ -20,6 +20,7 @@
 
 import socket
 import errno
+import time
 import mitmproxy
 from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
@@ -38,9 +39,11 @@ class PCAPdroid:
   def __init__(self, sock: socket.socket):
     self.sock = sock
 
-  def send_payload(self, client_conn: mitmproxy.connection.Client, payload_type: PayloadType, payload):
+  def send_payload(self, tstamp: float, client_conn: mitmproxy.connection.Client, payload_type: PayloadType, payload):
     client_port = client_conn.peername[1]
-    header = "%u:%s:%u\n" % (client_port, payload_type.value, len(payload))
+    tstamp_millis = int((tstamp or time.time()) * 1000)
+
+    header = "%u:%u:%s:%u\n" % (tstamp_millis, client_port, payload_type.value, len(payload))
     #ctx.log.debug(header)
 
     try:
@@ -56,11 +59,11 @@ class PCAPdroid:
 
   def request(self, flow: http.HTTPFlow):
     if flow.request:
-      self.send_payload(flow.client_conn, PayloadType.HTTP_REQUEST, assemble_request(flow.request))
+      self.send_payload(flow.request.timestamp_start, flow.client_conn, PayloadType.HTTP_REQUEST, assemble_request(flow.request))
 
   def response(self, flow: http.HTTPFlow) -> None:
     if flow.response:
-      self.send_payload(flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
+      self.send_payload(flow.response.timestamp_start, flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
 
   def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
     msg = flow.messages[-1]
@@ -68,7 +71,7 @@ class PCAPdroid:
        return
 
     payload_type = PayloadType.TCP_CLIENT_MSG if msg.from_client else PayloadType.TCP_SERVER_MSG
-    self.send_payload(flow.client_conn, payload_type, msg.content)
+    self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
 
   def websocket_message(self, flow: http.HTTPFlow):
     msg = flow.websocket.messages[-1]
@@ -76,10 +79,10 @@ class PCAPdroid:
       return
 
     payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
-    self.send_payload(flow.client_conn, payload_type, msg.content)
+    self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
 
   def tls_failed_client(self, layer: mitmproxy.proxy.layers.tls.ClientTLSLayer, err: str):
-      self.send_payload(layer.context.client, PayloadType.TLS_ERROR, err.encode("ascii"))
+      self.send_payload(time.time(), layer.context.client, PayloadType.TLS_ERROR, err.encode("ascii"))
 
   def log(self, entry: mitmproxy.log.LogEntry):
       print("[%s] %s" % (entry.level, entry.msg))
