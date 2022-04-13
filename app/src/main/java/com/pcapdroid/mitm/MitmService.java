@@ -133,6 +133,11 @@ public class MitmService extends Service implements Runnable {
         builder.append("-q --mode socks5 --listen-host 127.0.0.1 -p ");
         builder.append(mConf.proxyPort);
 
+        if(mConf.proxyAuth != null) {
+            builder.append(" --proxyauth ");
+            builder.append(mConf.proxyAuth);
+        }
+
         if(mConf.sslInsecure)
             builder.append(" --ssl-insecure");
 

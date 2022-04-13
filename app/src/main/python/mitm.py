@@ -38,6 +38,9 @@ import asyncio
 import typing
 import sys
 
+# backport SOCKS5 auth
+import socks5_auth
+
 # no extra newline in logcat
 import builtins
 builtins.print = lambda x: sys.stdout.write(str(x))
