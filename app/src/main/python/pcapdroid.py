@@ -65,6 +65,9 @@ class PCAPdroid:
     if flow.response:
       self.send_payload(flow.response.timestamp_start, flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
 
+  def error(self, flow: http.HTTPFlow):
+    print("TODO report HTTP error")
+
   def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
     msg = flow.messages[-1]
     if not msg:

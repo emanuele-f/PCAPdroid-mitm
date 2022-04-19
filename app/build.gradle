@@ -19,8 +19,8 @@ android {
 
         python {
             pip {
-                install "mitmproxy==7.0.4"
-                //options "--find-links", "../submodules/chaquopy-wheels"
+                install "mitmproxy==8.0.0"
+                options "--find-links", "../submodules/chaquopy-wheels"
             }
             pyc {
                 src true

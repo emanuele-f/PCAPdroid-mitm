@@ -38,9 +38,6 @@ import asyncio
 import typing
 import sys
 
-# backport SOCKS5 auth
-import socks5_auth
-
 # no extra newline in logcat
 import builtins
 builtins.print = lambda x: sys.stdout.write(str(x))
@@ -50,48 +47,40 @@ master = None
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
 def run(fd: int, mitm_args: str):
-    global master
-
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            async def main():
+                global master
+                opts = options.Options()
+                master = dump.DumpMaster(opts)
 
-            opts = options.Options()
-            master = dump.DumpMaster(opts)
+                parser = cmdline.mitmdump(opts)
+                args = parser.parse_args(mitm_args.split())
+                print(args)
+                process_options(parser, opts, args)
+                checkCertificate()
 
-            parser = cmdline.mitmdump(opts)
-            args = parser.parse_args(mitm_args.split())
-            print(args)
-            process_options(parser, opts, args)
-            checkCertificate()
+                pcapdroid = PCAPdroid(sock)
+                master.addons.add(pcapdroid)
 
-            pcapdroid = PCAPdroid(sock)
-            master.addons.add(pcapdroid)
+                print("Running mitmdump...")
+                await master.run()
 
-            # dirty hack for mitmproxy v7, TODO use the tls_failed_client hook when the next mitmproxy version is released
-            def on_handshake_error(layer: mitmproxy.proxy.layers.tls._TLSLayer, err: str):
-                if isinstance(layer, mitmproxy.proxy.layers.tls.ClientTLSLayer):
-                    pcapdroid.tls_failed_client(layer, err)
-                return mitmproxy.proxy.tunnel.TunnelLayer.on_handshake_error(layer, err)
+                # The proxyserver is not stopped by master.shutdown. Must be
+                # stopped to properly close the TCP socket.
+                proxyserver = master.addons.lookup.get("proxyserver")
+                if proxyserver:
+                    print("Stopping proxyserver...")
+                    await proxyserver.shutdown_server()
 
-            mitmproxy.proxy.layers.tls._TLSLayer.on_handshake_error = on_handshake_error
-
-            print("Running mitmdump...")
-            master.run()
-
-            # The proxyserver is not stopped by master.shutdown. Must be
-            # stopped to properly close the TCP socket.
-            proxyserver = master.addons.lookup.get("proxyserver")
-            if proxyserver:
-                asyncio.run(proxyserver.shutdown_server())
-
+            asyncio.run(main())
             print("mitmdump stopped")
     except socket.error as e:
         print(e)
 
 # Entrypoint: stops the running mitmproxy
 def stop():
+    # TODO stop even if called before run
     if master:
         print("Stopping mitmdump...")
         master.shutdown()
