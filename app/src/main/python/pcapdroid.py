@@ -28,10 +28,12 @@ from enum import Enum
 
 class PayloadType(Enum):
   TLS_ERROR = "tls_err"
+  HTTP_ERROR = "http_err"
   HTTP_REQUEST = "http_req"
   HTTP_REPLY = "http_rep"
   TCP_CLIENT_MSG = "tcp_climsg"
   TCP_SERVER_MSG = "tcp_srvmsg"
+  TCP_ERROR = "tcp_err"
   WEBSOCKET_CLIENT_MSG = "ws_climsg"
   WEBSOCKET_SERVER_MSG = "ws_srvmsg"
 
@@ -65,9 +67,6 @@ class PCAPdroid:
     if flow.response:
       self.send_payload(flow.response.timestamp_start, flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
 
-  def error(self, flow: http.HTTPFlow):
-    print("TODO report HTTP error")
-
   def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
     msg = flow.messages[-1]
     if not msg:
@@ -84,8 +83,18 @@ class PCAPdroid:
     payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
     self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
 
-  def tls_failed_client(self, layer: mitmproxy.proxy.layers.tls.ClientTLSLayer, err: str):
-      self.send_payload(time.time(), layer.context.client, PayloadType.TLS_ERROR, err.encode("ascii"))
+  def tls_failed_client(self, data: mitmproxy.tls.TlsData):
+    self.send_payload(time.time(), data.context.client, PayloadType.TLS_ERROR, data.conn.error.encode("ascii"))
 
-  def log(self, entry: mitmproxy.log.LogEntry):
+  def tls_failed_server(self, data: mitmproxy.tls.TlsData):
+    self.send_payload(time.time(), data.context.client, PayloadType.TLS_ERROR, data.conn.error.encode("ascii"))
+
+  def error(self, flow: http.HTTPFlow):
+    self.send_payload(time.time(), flow.context.client, PayloadType.HTTP_ERROR, flow.error.encode("ascii"))
+
+  def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
+    self.send_payload(time.time(), flow.context.client, PayloadType.TCP_ERROR, flow.error.encode("ascii"))
+
+  def add_log(self, entry: mitmproxy.log.LogEntry):
+    if(entry.level != "debug") and (entry.level != "info"):
       print("[%s] %s" % (entry.level, entry.msg))

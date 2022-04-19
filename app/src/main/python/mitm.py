@@ -40,7 +40,7 @@ import sys
 
 # no extra newline in logcat
 import builtins
-builtins.print = lambda x: sys.stdout.write(str(x))
+builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
 
 master = None
 
