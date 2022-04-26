@@ -71,6 +71,7 @@ def run(fd: int, dump_keylog: bool, mitm_args: str):
 
             asyncio.run(main())
             print("mitmdump stopped")
+            master = None
     except socket.error as e:
         print(e)
 
