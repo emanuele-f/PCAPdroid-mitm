@@ -19,8 +19,6 @@
 
 package com.pcapdroid.mitm;
 
-import android.os.ParcelFileDescriptor;
-
 import java.io.Serializable;
 
 /* API to integrate MitmAddon */
