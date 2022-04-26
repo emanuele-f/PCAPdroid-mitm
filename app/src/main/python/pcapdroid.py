@@ -27,6 +27,7 @@ from mitmproxy.net.http.http1.assemble import assemble_request, assemble_respons
 from enum import Enum
 
 class PayloadType(Enum):
+  RUNNING = "running"
   TLS_ERROR = "tls_err"
   HTTP_ERROR = "http_err"
   HTTP_REQUEST = "http_req"
@@ -64,6 +65,9 @@ class PCAPdroid:
       else:
         ctx.log.error(e)
         ctx.master.shutdown()
+
+  def running(self):
+    self.send_payload(time.time(), None, PayloadType.RUNNING, b'')
 
   def request(self, flow: http.HTTPFlow):
     if flow.request:

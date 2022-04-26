@@ -34,8 +34,6 @@ import android.util.Log;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
@@ -103,13 +101,8 @@ public class MitmService extends Service implements Runnable {
                     Log.w(TAG, "Thread already active");
                 break;
             case MitmAPI.MSG_STOP_MITM:
-                // NOTE: sometimes the thread gets stuck even if the fd is closed from the remote
-                // side. In such a case, this command allows us to go on
-                if(mThread != null) {
-                    Log.i(TAG, "Stopping running thread");
-                    mThread.interrupt();
-                    mThread = null;
-                }
+                //Log.d(TAG, "stop called");
+                _stop();
                 break;
             case MitmAPI.MSG_GET_CA_CERTIFICATE:
                 if(mThread == null)
@@ -150,7 +143,8 @@ public class MitmService extends Service implements Runnable {
             mitm.callAttr("run", mFd.getFd(), mConf.dumpMasterSecrets, args);
         } finally {
             try {
-                mFd.close();
+                if(mFd != null)
+                    mFd.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

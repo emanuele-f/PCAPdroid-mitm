@@ -40,10 +40,15 @@ import builtins
 builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
 
 master = None
+running = False
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
 def run(fd: int, dump_keylog: bool, mitm_args: str):
+    global master
+    global running
+    running = True
+
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
             async def main():
@@ -70,16 +75,24 @@ def run(fd: int, dump_keylog: bool, mitm_args: str):
                     await proxyserver.shutdown_server()
 
             asyncio.run(main())
-            print("mitmdump stopped")
-            master = None
     except socket.error as e:
         print(e)
 
+    print("mitmdump stopped")
+    master = None
+    running = False
+
 # Entrypoint: stops the running mitmproxy
 def stop():
-    # TODO stop even if called before run
+    global running
+
+    if not running:
+        return
+
+    print("Stopping mitmdump...")
+    running = False
+
     if master:
-        print("Stopping mitmdump...")
         master.shutdown()
 
 def checkCertificate():
