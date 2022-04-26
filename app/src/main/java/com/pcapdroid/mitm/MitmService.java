@@ -119,9 +119,6 @@ public class MitmService extends Service implements Runnable {
                     replyWithError(msg.replyTo);
                 }
                 break;
-            case MitmAPI.MSG_GET_SSLKEYLOG:
-                handleGetSslkeylog(msg.replyTo);
-                break;
             default:
                 Log.w(TAG, "Unknown message: " + msg.what);
         }
@@ -150,7 +147,7 @@ public class MitmService extends Service implements Runnable {
         Log.d(TAG, "mitmdump " + args);
 
         try {
-            mitm.callAttr("run", mFd.getFd(), args);
+            mitm.callAttr("run", mFd.getFd(), mConf.dumpMasterSecrets, args);
         } finally {
             try {
                 mFd.close();
@@ -197,39 +194,6 @@ public class MitmService extends Service implements Runnable {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-        }
-    }
-
-    private void handleGetSslkeylog(Messenger replyTo) {
-        // sync with mitm.py
-        File sslkeylog = new File(getFilesDir() + "/.mitmproxy/sslkeylogfile.txt");
-        byte[] rv = null;
-
-        try(FileInputStream in = new FileInputStream(sslkeylog)) {
-            byte[] bytes = new byte[(int) sslkeylog.length()];
-            int idx = 0;
-
-            while(idx < bytes.length) {
-                int bytesRead = in.read(bytes, idx, bytes.length - idx);
-                if(bytesRead <= 0)
-                    break;
-                idx += bytesRead;
-            }
-
-            rv = bytes;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Bundle bundle = new Bundle();
-        bundle.putByteArray(MitmAPI.SSLKEYLOG_RESULT, rv);
-        Message msg = Message.obtain(null, MitmAPI.MSG_GET_SSLKEYLOG);
-        msg.setData(bundle);
-
-        try {
-            replyTo.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
         }
     }
 

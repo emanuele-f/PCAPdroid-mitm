@@ -23,9 +23,6 @@ import os
 MITMPROXY_CONF_DIR = os.environ["HOME"] + "/.mitmproxy"
 CA_CERT_PATH = MITMPROXY_CONF_DIR + "/mitmproxy-ca-cert.cer"
 
-# must be set before importing mitmproxy - sync with handleGetSslkeylog
-os.environ["SSLKEYLOGFILE"] = MITMPROXY_CONF_DIR + "/sslkeylogfile.txt"
-
 from mitmproxy import options
 from mitmproxy.tools import dump, cmdline
 from mitmproxy.tools.main import mitmdump, process_options
@@ -46,7 +43,7 @@ master = None
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, mitm_args: str):
+def run(fd: int, dump_keylog: bool, mitm_args: str):
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
             async def main():
@@ -56,11 +53,10 @@ def run(fd: int, mitm_args: str):
 
                 parser = cmdline.mitmdump(opts)
                 args = parser.parse_args(mitm_args.split())
-                print(args)
                 process_options(parser, opts, args)
                 checkCertificate()
 
-                pcapdroid = PCAPdroid(sock)
+                pcapdroid = PCAPdroid(sock, dump_keylog)
                 master.addons.add(pcapdroid)
 
                 print("Running mitmdump...")

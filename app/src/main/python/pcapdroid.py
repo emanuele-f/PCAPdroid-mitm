@@ -36,13 +36,19 @@ class PayloadType(Enum):
   TCP_ERROR = "tcp_err"
   WEBSOCKET_CLIENT_MSG = "ws_climsg"
   WEBSOCKET_SERVER_MSG = "ws_srvmsg"
+  MASTER_SECRET = "secret"
 
 class PCAPdroid:
-  def __init__(self, sock: socket.socket):
+  def __init__(self, sock: socket.socket, dump_master_secrets: bool):
     self.sock = sock
 
+    if dump_master_secrets:
+      mitmproxy.net.tls.log_master_secret = self.log_master_secret
+    else:
+      mitmproxy.net.tls.log_master_secret = None
+
   def send_payload(self, tstamp: float, client_conn: mitmproxy.connection.Client, payload_type: PayloadType, payload):
-    client_port = client_conn.peername[1]
+    client_port = client_conn.peername[1] if client_conn else 0
     tstamp_millis = int((tstamp or time.time()) * 1000)
 
     header = "%u:%u:%s:%u\n" % (tstamp_millis, client_port, payload_type.value, len(payload))
@@ -82,6 +88,9 @@ class PCAPdroid:
 
     payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
     self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
+
+  def log_master_secret(self, ssl_connection, keymaterial: bytes):
+    self.send_payload(time.time(), None, PayloadType.MASTER_SECRET, keymaterial)
 
   def tls_failed_client(self, data: mitmproxy.tls.TlsData):
     self.send_payload(time.time(), data.context.client, PayloadType.TLS_ERROR, data.conn.error.encode("ascii"))
