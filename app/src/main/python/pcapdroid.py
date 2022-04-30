@@ -26,6 +26,18 @@ from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
 from mitmproxy.proxy import server_hooks
 from enum import Enum
+from java import jclass
+
+Log = jclass("android.util.Log")
+
+# mitmproxy log level -> android level
+str2lvl = {
+  "debug": Log.DEBUG,
+  "alert": Log.DEBUG,
+  "info": Log.INFO,
+  "warn": Log.WARN,
+  "error": Log.ERROR,
+}
 
 class PayloadType(Enum):
   RUNNING = "running"
@@ -113,5 +125,5 @@ class PCAPdroid:
     self.send_payload(time.time(), flow.context.client, PayloadType.TCP_ERROR, flow.error.encode("ascii"))
 
   def add_log(self, entry: mitmproxy.log.LogEntry):
-    if(entry.level != "debug") and (entry.level != "info"):
-      print("[%s] %s" % (entry.level, entry.msg))
+    lvl = str2lvl.get(entry.level, Log.DEBUG)
+    Log.println(lvl, "mitmproxy", entry.msg)
