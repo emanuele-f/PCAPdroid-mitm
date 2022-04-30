@@ -39,7 +39,7 @@ str2lvl = {
     "error": Log.ERROR,
 }
 
-class PayloadType(Enum):
+class MsgType(Enum):
     RUNNING = "running"
     TLS_ERROR = "tls_err"
     HTTP_ERROR = "http_err"
@@ -61,7 +61,7 @@ class PCAPdroid:
         else:
             mitmproxy.net.tls.log_master_secret = None
 
-    def send_payload(self, tstamp: float, client_conn: mitmproxy.connection.Client, payload_type: PayloadType, payload):
+    def send_message(self, tstamp: float, client_conn: mitmproxy.connection.Client, payload_type: MsgType, payload):
         client_port = client_conn.peername[1] if client_conn else 0
         tstamp_millis = int((tstamp or time.time()) * 1000)
 
@@ -80,49 +80,49 @@ class PCAPdroid:
                 ctx.master.shutdown()
 
     def running(self):
-        self.send_payload(time.time(), None, PayloadType.RUNNING, b'')
+        self.send_message(time.time(), None, MsgType.RUNNING, b'')
 
     def server_error(self, data: server_hooks.ServerConnectionHookData):
-        self.send_payload(time.time(), data.client, PayloadType.TCP_ERROR, data.server.error.encode("ascii"))
+        self.send_message(time.time(), data.client, MsgType.TCP_ERROR, data.server.error.encode("ascii"))
 
     def request(self, flow: http.HTTPFlow):
         if flow.request:
-            self.send_payload(flow.request.timestamp_start, flow.client_conn, PayloadType.HTTP_REQUEST, assemble_request(flow.request))
+            self.send_message(flow.request.timestamp_start, flow.client_conn, MsgType.HTTP_REQUEST, assemble_request(flow.request))
 
     def response(self, flow: http.HTTPFlow) -> None:
         if flow.response:
-            self.send_payload(flow.response.timestamp_start, flow.client_conn, PayloadType.HTTP_REPLY, assemble_response(flow.response))
+            self.send_message(flow.response.timestamp_start, flow.client_conn, MsgType.HTTP_REPLY, assemble_response(flow.response))
 
     def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
         msg = flow.messages[-1]
         if not msg:
              return
 
-        payload_type = PayloadType.TCP_CLIENT_MSG if msg.from_client else PayloadType.TCP_SERVER_MSG
-        self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
+        payload_type = MsgType.TCP_CLIENT_MSG if msg.from_client else MsgType.TCP_SERVER_MSG
+        self.send_message(msg.timestamp, flow.client_conn, payload_type, msg.content)
 
     def websocket_message(self, flow: http.HTTPFlow):
         msg = flow.websocket.messages[-1]
         if not msg:
             return
 
-        payload_type = PayloadType.WEBSOCKET_CLIENT_MSG if msg.from_client else PayloadType.WEBSOCKET_SERVER_MSG
-        self.send_payload(msg.timestamp, flow.client_conn, payload_type, msg.content)
+        payload_type = MsgType.WEBSOCKET_CLIENT_MSG if msg.from_client else MsgType.WEBSOCKET_SERVER_MSG
+        self.send_message(msg.timestamp, flow.client_conn, payload_type, msg.content)
 
     def log_master_secret(self, ssl_connection, keymaterial: bytes):
-        self.send_payload(time.time(), None, PayloadType.MASTER_SECRET, keymaterial)
+        self.send_message(time.time(), None, MsgType.MASTER_SECRET, keymaterial)
 
     def tls_failed_client(self, data: mitmproxy.tls.TlsData):
-        self.send_payload(time.time(), data.context.client, PayloadType.TLS_ERROR, data.conn.error.encode("ascii"))
+        self.send_message(time.time(), data.context.client, MsgType.TLS_ERROR, data.conn.error.encode("ascii"))
 
     def tls_failed_server(self, data: mitmproxy.tls.TlsData):
-        self.send_payload(time.time(), data.context.client, PayloadType.TLS_ERROR, data.conn.error.encode("ascii"))
+        self.send_message(time.time(), data.context.client, MsgType.TLS_ERROR, data.conn.error.encode("ascii"))
 
     def error(self, flow: http.HTTPFlow):
-        self.send_payload(time.time(), flow.context.client, PayloadType.HTTP_ERROR, flow.error.encode("ascii"))
+        self.send_message(time.time(), flow.context.client, MsgType.HTTP_ERROR, flow.error.encode("ascii"))
 
     def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
-        self.send_payload(time.time(), flow.context.client, PayloadType.TCP_ERROR, flow.error.encode("ascii"))
+        self.send_message(time.time(), flow.context.client, MsgType.TCP_ERROR, flow.error.encode("ascii"))
 
     def add_log(self, entry: mitmproxy.log.LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
