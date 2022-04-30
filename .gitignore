@@ -17,3 +17,4 @@ captures/
 .cxx
 app/release/
 app/debug/
+dist/

@@ -120,7 +120,7 @@ public class MitmService extends Service implements Runnable {
     private String getMitmproxyArgs() {
         StringBuilder builder = new StringBuilder();
 
-        builder.append("-q --mode socks5 --listen-host 127.0.0.1 -p ");
+        builder.append("-q --set onboarding=false --mode socks5 --listen-host 127.0.0.1 -p ");
         builder.append(mConf.proxyPort);
 
         if(mConf.proxyAuth != null) {
