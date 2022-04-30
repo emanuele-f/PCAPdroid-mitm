@@ -24,6 +24,7 @@ import time
 import mitmproxy
 from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
+from mitmproxy.proxy import server_hooks
 from enum import Enum
 
 class PayloadType(Enum):
@@ -68,6 +69,9 @@ class PCAPdroid:
 
   def running(self):
     self.send_payload(time.time(), None, PayloadType.RUNNING, b'')
+
+  def server_error(self, data: server_hooks.ServerConnectionHookData):
+    self.send_payload(time.time(), data.client, PayloadType.TCP_ERROR, data.server.error.encode("ascii"))
 
   def request(self, flow: http.HTTPFlow):
     if flow.request:

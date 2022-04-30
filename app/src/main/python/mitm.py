@@ -27,6 +27,8 @@ from mitmproxy import options
 from mitmproxy.tools import dump, cmdline
 from mitmproxy.tools.main import mitmdump, process_options
 from mitmproxy.certs import CertStore, Cert
+from mitmproxy.proxy import server_hooks
+from mitmproxy.proxy.events import OpenConnectionCompleted
 from pcapdroid import PCAPdroid
 from pathlib import Path
 import mitmproxy
@@ -38,6 +40,21 @@ import sys
 # no extra newline in logcat
 import builtins
 builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
+
+# Temporary hack to provide a server_error hook
+ConnectionHandler = mitmproxy.proxy.server.ConnectionHandler
+orig_server_event = ConnectionHandler.server_event
+
+def server_event_proxy(pcapdroid, handler, event):
+    if isinstance(event, OpenConnectionCompleted) and event.command.connection:
+     conn = event.command.connection
+     if conn.error:
+        hook_data = server_hooks.ServerConnectionHookData(
+            client=handler.client,
+            server=conn
+        )
+        pcapdroid.server_error(hook_data)
+    return orig_server_event(handler, event)
 
 master = None
 running = False
@@ -63,6 +80,8 @@ def run(fd: int, dump_keylog: bool, mitm_args: str):
 
                 pcapdroid = PCAPdroid(sock, dump_keylog)
                 master.addons.add(pcapdroid)
+
+                ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(pcapdroid, handler, ev)
 
                 print("Running mitmdump...")
                 await master.run()
