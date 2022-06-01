@@ -22,6 +22,7 @@ import socket
 import errno
 import time
 import mitmproxy
+import traceback
 from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
 from mitmproxy.proxy import server_hooks
@@ -126,4 +127,9 @@ class PCAPdroid:
 
     def add_log(self, entry: mitmproxy.log.LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
+
+        if lvl >= Log.ERROR:
+            for line in traceback.format_stack():
+                Log.println(lvl, "mitmproxy", line)
+
         Log.println(lvl, "mitmproxy", entry.msg)
