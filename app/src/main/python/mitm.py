@@ -61,7 +61,7 @@ running = False
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, dump_keylog: bool, mitm_args: str):
+def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
     global master
     global running
     running = True
@@ -78,7 +78,7 @@ def run(fd: int, dump_keylog: bool, mitm_args: str):
                 process_options(parser, opts, args)
                 checkCertificate()
 
-                pcapdroid = PCAPdroid(sock, dump_keylog)
+                pcapdroid = PCAPdroid(sock, dump_client, dump_keylog)
                 master.addons.add(pcapdroid)
 
                 ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(pcapdroid, handler, ev)

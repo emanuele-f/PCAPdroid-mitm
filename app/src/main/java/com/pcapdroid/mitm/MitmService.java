@@ -120,12 +120,18 @@ public class MitmService extends Service implements Runnable {
     private String getMitmproxyArgs() {
         StringBuilder builder = new StringBuilder();
 
-        builder.append("-q --set onboarding=false --mode socks5 --listen-host 127.0.0.1 -p ");
+        builder.append("-q --set onboarding=false --listen-host 127.0.0.1 -p ");
         builder.append(mConf.proxyPort);
 
-        if(mConf.proxyAuth != null) {
-            builder.append(" --proxyauth ");
-            builder.append(mConf.proxyAuth);
+        if(mConf.transparentMode) {
+            builder.append(" --mode transparent");
+        } else {
+            builder.append(" --mode socks5");
+
+            if(mConf.proxyAuth != null) {
+                builder.append(" --proxyauth ");
+                builder.append(mConf.proxyAuth);
+            }
         }
 
         if(mConf.sslInsecure)
@@ -139,8 +145,12 @@ public class MitmService extends Service implements Runnable {
         String args = getMitmproxyArgs();
         Log.d(TAG, "mitmdump " + args);
 
+        // SOCKS5 mode is used with VPNService, so we must dump the client (original) connection
+        // Transparent mode is used with root mode where we capture the internet interface, so we must dump the server connection
+        boolean dump_client = !mConf.transparentMode;
+
         try {
-            mitm.callAttr("run", mFd.getFd(), mConf.dumpMasterSecrets, args);
+            mitm.callAttr("run", mFd.getFd(), dump_client, mConf.dumpMasterSecrets, args);
         } finally {
             try {
                 if(mFd != null)
