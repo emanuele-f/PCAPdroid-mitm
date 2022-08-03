@@ -1,6 +1,6 @@
 pluginManagement {
     repositories {
-        maven { url "https://chaquo.com/maven" }
+        mavenCentral()
     }
 }
 dependencyResolutionManagement {
