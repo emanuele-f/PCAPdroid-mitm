@@ -137,13 +137,17 @@ public class MitmService extends Service implements Runnable {
         if(mConf.sslInsecure)
             builder.append(" --ssl-insecure");
 
+        if((mConf.additionalOptions != null) && !mConf.additionalOptions.isEmpty()) {
+            builder.append(" ");
+            builder.append(mConf.additionalOptions);
+        }
+
         return builder.toString();
     }
 
     @Override
     public void run() {
         String args = getMitmproxyArgs();
-        Log.d(TAG, "mitmdump " + args);
 
         // SOCKS5 mode is used with VPNService, so we must dump the client (original) connection
         // Transparent mode is used with root mode where we capture the internet interface, so we must dump the server connection

@@ -133,7 +133,7 @@ class PCAPdroid:
     def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
         self.send_message(time.time(), flow.context.client, data.context.server, MsgType.TCP_ERROR, flow.error.encode("ascii"))
 
-    def do_log(self, msg, lvl=Log.INFO):
+    def log(self, msg, lvl=Log.INFO):
         Log.println(lvl, "mitmproxy", msg)
 
         try:
@@ -141,11 +141,14 @@ class PCAPdroid:
         except:
             pass
 
+    def log_warn(self, msg):
+        self.log(msg, lvl=Log.WARN)
+
     def add_log(self, entry: mitmproxy.log.LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
 
         if lvl >= Log.ERROR:
             for line in traceback.format_stack():
-                self.do_log(line, lvl)
+                self.log(line, lvl)
 
-        self.do_log(entry.msg, lvl)
+        self.log(entry.msg, lvl)

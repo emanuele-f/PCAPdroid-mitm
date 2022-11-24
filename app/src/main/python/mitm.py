@@ -34,25 +34,34 @@ from pathlib import Path
 import mitmproxy
 import socket
 import asyncio
-import typing
 import sys
 
 master = None
 pcapdroid = None
 running = False
 
-def my_print(x, *args, **kargs):
-    msg = str(x)
+orig_stdout = sys.stdout
+class StdOut:
+    def isatty(self):
+        return orig_stdout.isatty()
+    def write(self, msg):
+        if pcapdroid:
+            pcapdroid.log(msg)
 
-    # no extra newline in logcat
-    sys.stdout.write(msg)
+orig_stderr = sys.stderr
+class StdErr:
+    def isatty(self):
+        return orig_stderr.isatty()
+    def write(self, msg):
+        if pcapdroid:
+            pcapdroid.log_warn(msg)
 
-    if pcapdroid:
-        # send log to PCAPdroid
-        pcapdroid.do_log(msg)
+sys.stdout = StdOut()
+sys.stderr = StdErr()
 
+# no extra newline in logcat
 import builtins
-builtins.print = my_print
+builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
 
 # Temporary hack to provide a server_error hook
 ConnectionHandler = mitmproxy.proxy.server.ConnectionHandler
@@ -85,13 +94,15 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
+                # instantiate PCAPdroid early to send error log via the API
+                pcapdroid = PCAPdroid(sock, dump_client, dump_keylog)
+                master.addons.add(pcapdroid)
+
+                print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)
                 args = parser.parse_args(mitm_args.split())
                 process_options(parser, opts, args)
                 checkCertificate()
-
-                pcapdroid = PCAPdroid(sock, dump_client, dump_keylog)
-                master.addons.add(pcapdroid)
 
                 ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(handler, ev)
 
@@ -106,7 +117,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
                     await proxyserver.shutdown_server()
 
             asyncio.run(main())
-    except socket.error as e:
+    except exception as e:
         print(e)
 
     print("mitmdump stopped")
