@@ -98,7 +98,7 @@ public class MitmService extends Service implements Runnable {
                     mThread = new Thread(MitmService.this);
                     mThread.start();
                 } else
-                    Log.w(TAG, "Thread already active");
+                    log_w("Thread already active");
                 break;
             case MitmAPI.MSG_STOP_MITM:
                 //Log.d(TAG, "stop called");
@@ -108,12 +108,12 @@ public class MitmService extends Service implements Runnable {
                 if(mThread == null)
                     handleGetCaCertificate(msg.replyTo);
                 else {
-                    Log.w(TAG, "Not supported while mitm running");
+                    log_w("Not supported while mitm running");
                     replyWithError(msg.replyTo);
                 }
                 break;
             default:
-                Log.w(TAG, "Unknown message: " + msg.what);
+                log_w("Unknown message: " + msg.what);
         }
     }
 
@@ -178,6 +178,24 @@ public class MitmService extends Service implements Runnable {
         }
 
         stopSelf();
+    }
+
+    private void log_i(String msg) {
+        Log.i(TAG, msg);
+        if(mitm != null)
+            mitm.callAttr("log", Log.INFO, msg);
+    }
+
+    private void log_w(String msg) {
+        Log.w(TAG, msg);
+        if(mitm != null)
+            mitm.callAttr("log", Log.WARN, msg);
+    }
+
+    private void log_e(String msg) {
+        Log.e(TAG, msg);
+        if(mitm != null)
+            mitm.callAttr("log", Log.ERROR, msg);
     }
 
     private void handleGetCaCertificate(Messenger replyTo) {

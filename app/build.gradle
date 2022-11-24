@@ -4,14 +4,14 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.pcapdroid.mitm"
         minSdk 21
-        targetSdk 32
-        versionCode 9
-        versionName "0.9"
+        targetSdk 33
+        versionCode 10
+        versionName "0.10"
 
         // see productFlavors below
         /*ndk {

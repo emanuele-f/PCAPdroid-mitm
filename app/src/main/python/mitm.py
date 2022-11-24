@@ -37,39 +37,51 @@ import asyncio
 import typing
 import sys
 
-# no extra newline in logcat
+master = None
+pcapdroid = None
+running = False
+
+def my_print(x, *args, **kargs):
+    msg = str(x)
+
+    # no extra newline in logcat
+    sys.stdout.write(msg)
+
+    if pcapdroid:
+        # send log to PCAPdroid
+        pcapdroid.do_log(msg)
+
 import builtins
-builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
+builtins.print = my_print
 
 # Temporary hack to provide a server_error hook
 ConnectionHandler = mitmproxy.proxy.server.ConnectionHandler
 orig_server_event = ConnectionHandler.server_event
 
-def server_event_proxy(pcapdroid, handler, event):
-    if isinstance(event, OpenConnectionCompleted) and event.command.connection:
-     conn = event.command.connection
-     if conn.error:
-        hook_data = server_hooks.ServerConnectionHookData(
-            client=handler.client,
-            server=conn
-        )
-        pcapdroid.server_error(hook_data)
+def server_event_proxy(handler, event):
+    if pcapdroid and isinstance(event, OpenConnectionCompleted) and event.command.connection:
+        conn = event.command.connection
+        if conn.error:
+            hook_data = server_hooks.ServerConnectionHookData(
+                client=handler.client,
+                server=conn
+            )
+            pcapdroid.server_error(hook_data)
     return orig_server_event(handler, event)
-
-master = None
-running = False
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
 def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
     global master
     global running
+    global pcapdroid
     running = True
 
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
             async def main():
                 global master
+                global pcapdroid
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
@@ -81,7 +93,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
                 pcapdroid = PCAPdroid(sock, dump_client, dump_keylog)
                 master.addons.add(pcapdroid)
 
-                ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(pcapdroid, handler, ev)
+                ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(handler, ev)
 
                 print("Running mitmdump...")
                 await master.run()
@@ -100,6 +112,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
     print("mitmdump stopped")
     master = None
     running = False
+    pcapdroid = None
 
 # Entrypoint: stops the running mitmproxy
 def stop():
@@ -113,6 +126,11 @@ def stop():
 
     if master:
         master.shutdown()
+
+# Entrypoint: logs a message to
+def log(lvl: int, msg: str):
+    if pcapdroid:
+        pcapdroid.do_log(msg, lvl)
 
 def checkCertificate():
     if os.path.exists(CA_CERT_PATH):

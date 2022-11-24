@@ -52,6 +52,7 @@ class MsgType(Enum):
     WEBSOCKET_CLIENT_MSG = "ws_climsg"
     WEBSOCKET_SERVER_MSG = "ws_srvmsg"
     MASTER_SECRET = "secret"
+    LOG = "log"
 
 class PCAPdroid:
     def __init__(self, sock: socket.socket, dump_client: bool, dump_master_secrets: bool):
@@ -132,11 +133,19 @@ class PCAPdroid:
     def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
         self.send_message(time.time(), flow.context.client, data.context.server, MsgType.TCP_ERROR, flow.error.encode("ascii"))
 
+    def do_log(self, msg, lvl=Log.INFO):
+        Log.println(lvl, "mitmproxy", msg)
+
+        try:
+            self.send_message(time.time(), None, None, MsgType.LOG, (str(lvl) + ":" + msg).encode("ascii"))
+        except:
+            pass
+
     def add_log(self, entry: mitmproxy.log.LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
 
         if lvl >= Log.ERROR:
             for line in traceback.format_stack():
-                Log.println(lvl, "mitmproxy", line)
+                self.do_log(line, lvl)
 
-        Log.println(lvl, "mitmproxy", entry.msg)
+        self.do_log(entry.msg, lvl)
