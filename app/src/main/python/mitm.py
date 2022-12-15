@@ -29,7 +29,7 @@ from mitmproxy.tools.main import mitmdump, process_options
 from mitmproxy.certs import CertStore, Cert
 from mitmproxy.proxy import server_hooks
 from mitmproxy.proxy.events import OpenConnectionCompleted
-from pcapdroid import PCAPdroid
+from pcapdroid import PCAPdroid, AddonOpts
 from pathlib import Path
 import mitmproxy
 import socket
@@ -80,7 +80,7 @@ def server_event_proxy(handler, event):
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
+def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm_args: str):
     global master
     global running
     global pcapdroid
@@ -95,7 +95,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, mitm_args: str):
                 master = dump.DumpMaster(opts)
 
                 # instantiate PCAPdroid early to send error log via the API
-                pcapdroid = PCAPdroid(sock, dump_client, dump_keylog)
+                pcapdroid = PCAPdroid(sock, AddonOpts(dump_client, dump_keylog, short_payload))
                 master.addons.add(pcapdroid)
 
                 print("mitmdump " + mitm_args)

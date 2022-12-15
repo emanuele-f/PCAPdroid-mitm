@@ -40,6 +40,14 @@ str2lvl = {
     "error": Log.ERROR,
 }
 
+SHORT_PAYLOAD_MAX_DIRECTION_SIZE = 512
+
+class AddonOpts:
+    def __init__(self, dump_client, dump_keylog, short_payload):
+        self.dump_client = dump_client
+        self.dump_keylog = dump_keylog
+        self.short_payload = short_payload
+
 class MsgType(Enum):
     RUNNING = "running"
     TLS_ERROR = "tls_err"
@@ -51,25 +59,32 @@ class MsgType(Enum):
     TCP_ERROR = "tcp_err"
     WEBSOCKET_CLIENT_MSG = "ws_climsg"
     WEBSOCKET_SERVER_MSG = "ws_srvmsg"
+    DATA_TRUNCATED = "trunc"
     MASTER_SECRET = "secret"
     LOG = "log"
 
-class PCAPdroid:
-    def __init__(self, sock: socket.socket, dump_client: bool, dump_master_secrets: bool):
-        self.sock = sock
-        self.dump_client = dump_client
+# pcapdroid per-flow state
+class FlowData:
+    request_sent: bool = False
+    response_sent: bool = False
+    truncated: bool = False
 
-        if dump_master_secrets:
+class PCAPdroid:
+    def __init__(self, sock: socket.socket, opts: AddonOpts):
+        self.sock = sock
+        self.opts = opts
+
+        if opts.dump_keylog:
             mitmproxy.net.tls.log_master_secret = self.log_master_secret
         else:
             mitmproxy.net.tls.log_master_secret = None
 
     def send_message(self, tstamp: float, client_conn: mitmproxy.connection.Client,
-            server_conn: mitmproxy.connection.Server, payload_type: MsgType, payload):
+            server_conn: mitmproxy.connection.Server, payload_type: MsgType, payload: bytes):
         port = 0
-        if self.dump_client and client_conn:
+        if self.opts.dump_client and client_conn:
             port = client_conn.peername[1]
-        elif not self.dump_client and server_conn:
+        elif not self.opts.dump_client and server_conn:
             port = server_conn.sockname[1]
 
         tstamp_millis = int((tstamp or time.time()) * 1000)
@@ -88,48 +103,116 @@ class PCAPdroid:
                 ctx.log.error(e)
                 ctx.master.shutdown()
 
+    def getFlowData(self, flow):
+        # Extend the flow with additional data
+        if not getattr(flow, "pd_data", None):
+            flow.pd_data = FlowData()
+        return flow.pd_data
+
+    def checkPayload(self, flow, data, req):
+        # short payload works as follows:
+        # 1. send at most MINIMAL_PAYLOAD_MAX_DIRECTION_SIZE bytes, per direction (send / receive)
+        # 2. send DATA_TRUNCATED message if data is truncated
+        flow_data = self.getFlowData(flow)
+
+        if not self.opts.short_payload:
+            return data
+        if flow_data.truncated:
+            return
+
+        sent_flag = flow_data.request_sent if req else flow_data.response_sent
+        if sent_flag:
+            flow_data.truncated = True
+            data = None
+        elif len(data) >= SHORT_PAYLOAD_MAX_DIRECTION_SIZE:
+            flow_data.truncated = True
+            data = data[:SHORT_PAYLOAD_MAX_DIRECTION_SIZE]
+
+        if flow_data.truncated:
+            self.send_message(time.time(), flow.client_conn, flow.server_conn, MsgType.DATA_TRUNCATED, b"")
+
+        if req:
+            flow_data.request_sent = True
+        else:
+            flow_data.response_sent = True
+        return data
+
+    # override
     def running(self):
         self.send_message(time.time(), None, None, MsgType.RUNNING, b'')
 
+    # override
     def server_error(self, data: server_hooks.ServerConnectionHookData):
         self.send_message(time.time(), data.client, data.server, MsgType.TCP_ERROR, data.server.error.encode("ascii"))
 
+    # override
     def request(self, flow: http.HTTPFlow):
         if flow.request:
-            self.send_message(flow.request.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REQUEST, assemble_request(flow.request))
+            data = self.checkPayload(flow, assemble_request(flow.request), req=True)
+            if data:
+                self.send_message(flow.request.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REQUEST, data)
 
+    # override
     def response(self, flow: http.HTTPFlow) -> None:
         if flow.response:
-            self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REPLY, assemble_response(flow.response))
+            data = self.checkPayload(flow, assemble_response(flow.response), req=False)
+            if data:
+                self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REPLY, data)
 
+    # override
     def tcp_message(self, flow: mitmproxy.tcp.TCPFlow):
         msg = flow.messages[-1]
         if not msg:
              return
 
-        payload_type = MsgType.TCP_CLIENT_MSG if msg.from_client else MsgType.TCP_SERVER_MSG
-        self.send_message(msg.timestamp, flow.client_conn, flow.server_conn, payload_type, msg.content)
+        data = msg.content
+        payload_type = None
 
+        if msg.from_client:
+            payload_type = MsgType.TCP_CLIENT_MSG
+            data = self.checkPayload(flow, data, req=True)
+        else:
+            payload_type = MsgType.TCP_SERVER_MSG
+            data = self.checkPayload(flow, data, req=False)
+
+        if data:
+            self.send_message(msg.timestamp, flow.client_conn, flow.server_conn, payload_type, data)
+
+    # override
     def websocket_message(self, flow: http.HTTPFlow):
         msg = flow.websocket.messages[-1]
         if not msg:
             return
 
-        payload_type = MsgType.WEBSOCKET_CLIENT_MSG if msg.from_client else MsgType.WEBSOCKET_SERVER_MSG
-        self.send_message(msg.timestamp, flow.client_conn, flow.server_conn, payload_type, msg.content)
+        data = msg.content
+        payload_type = None
+
+        if msg.from_client:
+            payload_type = MsgType.WEBSOCKET_CLIENT_MSG
+            data = self.checkPayload(flow, data, req=True)
+        else:
+            payload_type = MsgType.WEBSOCKET_SERVER_MSG
+            data = self.checkPayload(flow, data, req=False)
+
+        if data:
+            self.send_message(msg.timestamp, flow.client_conn, flow.server_conn, payload_type, data)
 
     def log_master_secret(self, ssl_connection, keymaterial: bytes):
         self.send_message(time.time(), None, None, MsgType.MASTER_SECRET, keymaterial)
 
+    # override
     def tls_failed_client(self, data: mitmproxy.tls.TlsData):
         self.send_message(time.time(), data.context.client, data.context.server, MsgType.TLS_ERROR, data.conn.error.encode("ascii"))
 
+    # override
     def tls_failed_server(self, data: mitmproxy.tls.TlsData):
         self.send_message(time.time(), data.context.client, data.context.server, MsgType.TLS_ERROR, data.conn.error.encode("ascii"))
 
+    # override
     def error(self, flow: http.HTTPFlow):
         self.send_message(time.time(), flow.context.client, data.context.server, MsgType.HTTP_ERROR, flow.error.encode("ascii"))
 
+    # override
     def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
         self.send_message(time.time(), flow.context.client, data.context.server, MsgType.TCP_ERROR, flow.error.encode("ascii"))
 
@@ -144,11 +227,15 @@ class PCAPdroid:
     def log_warn(self, msg):
         self.log(msg, lvl=Log.WARN)
 
+    # override
     def add_log(self, entry: mitmproxy.log.LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
 
         if lvl >= Log.ERROR:
             for line in traceback.format_stack():
                 self.log(line, lvl)
+        elif lvl == Log.INFO:
+            # mitmproxy is very verbose in info messages, treat them as debug
+            lvl = Log.DEBUG
 
         self.log(entry.msg, lvl)

@@ -154,7 +154,7 @@ public class MitmService extends Service implements Runnable {
         boolean dump_client = !mConf.transparentMode;
 
         try {
-            mitm.callAttr("run", mFd.getFd(), dump_client, mConf.dumpMasterSecrets, args);
+            mitm.callAttr("run", mFd.getFd(), dump_client, mConf.dumpMasterSecrets, mConf.shortPayload, args);
         } finally {
             try {
                 if(mFd != null)
