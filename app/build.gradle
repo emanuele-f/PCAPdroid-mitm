@@ -4,6 +4,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        release {
+            storeFile file('../keystore')
+            storePassword 'android'
+            keyAlias 'key0'
+            keyPassword 'android'
+        }
+    }
     compileSdk 33
 
     defaultConfig {
@@ -19,8 +27,9 @@ android {
         }*/
 
         python {
+            version "3.10"
             pip {
-                install "mitmproxy==8.0.0"
+                install "../submodules/mitmproxy" // 9.0.1
                 options "--find-links", "../submodules/chaquopy-wheels"
             }
             pyc {
@@ -54,6 +63,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

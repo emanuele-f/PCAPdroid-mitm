@@ -117,7 +117,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm
                     await proxyserver.shutdown_server()
 
             asyncio.run(main())
-    except exception as e:
+    except Exception as e:
         print(e)
 
     print("mitmdump stopped")

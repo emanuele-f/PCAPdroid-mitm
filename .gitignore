@@ -18,3 +18,4 @@ captures/
 app/release/
 app/debug/
 dist/
+keystore
