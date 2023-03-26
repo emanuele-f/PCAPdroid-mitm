@@ -6,4 +6,4 @@ The addon uses the open source framework [chaquopy](https://chaquo.com/chaquopy)
 
 # Build
 
-Install Python 3.8 and ensure to pull the submodules with `git submodules update --init`. Then build with gradle as usual.
+Install Python 3.10 and ensure to pull the submodules with `git submodules update --init`. Then build with gradle as usual.

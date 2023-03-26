@@ -32,6 +32,7 @@ from mitmproxy.proxy.events import OpenConnectionCompleted
 from pcapdroid import PCAPdroid, AddonOpts
 from pathlib import Path
 import mitmproxy
+import traceback
 import socket
 import asyncio
 import sys
@@ -55,6 +56,8 @@ class StdErr:
     def write(self, msg):
         if pcapdroid:
             pcapdroid.log_warn(msg)
+    def flush(self):
+        pass
 
 sys.stdout = StdOut()
 sys.stderr = StdErr()
@@ -113,12 +116,14 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm
                 # stopped to properly close the TCP socket.
                 proxyserver = master.addons.lookup.get("proxyserver")
                 if proxyserver:
+                    # see test_proxyserver.py
                     print("Stopping proxyserver...")
-                    await proxyserver.shutdown_server()
+                    master.options.update(server=False)
+                    await proxyserver.setup_servers()
 
             asyncio.run(main())
-    except Exception as e:
-        print(e)
+    except Exception:
+        print(traceback.format_exc())
 
     print("mitmdump stopped")
     master = None

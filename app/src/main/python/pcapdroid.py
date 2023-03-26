@@ -15,7 +15,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with PCAPdroid.  If not, see <http://www.gnu.org/licenses/>.
 #
-#  Copyright 2022 - Emanuele Faranda
+#  Copyright 2023 - Emanuele Faranda
 #
 
 import socket
@@ -26,8 +26,10 @@ import traceback
 from mitmproxy import http, ctx
 from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
 from mitmproxy.proxy import server_hooks
+from mitmproxy.log import LogEntry
 from enum import Enum
 from java import jclass
+from callback_logger import CallbackLogger
 
 Log = jclass("android.util.Log")
 
@@ -69,15 +71,27 @@ class FlowData:
     response_sent: bool = False
     truncated: bool = False
 
+# A mitmproxy addon
+# See https://docs.mitmproxy.org/stable/api/events.html
 class PCAPdroid:
     def __init__(self, sock: socket.socket, opts: AddonOpts):
         self.sock = sock
         self.opts = opts
+        self.shutting_down = False
+
+        # intercept log events from mitmproxy
+        self.logger = CallbackLogger(self._add_log)
+        self.logger.install()
 
         if opts.dump_keylog:
             mitmproxy.net.tls.log_master_secret = self.log_master_secret
         else:
             mitmproxy.net.tls.log_master_secret = None
+
+    # override
+    def done(self):
+        print("PCAPdroid done")
+        self.logger.uninstall()
 
     def send_message(self, tstamp: float, client_conn: mitmproxy.connection.Client,
             server_conn: mitmproxy.connection.Server, payload_type: MsgType, payload: bytes):
@@ -90,18 +104,21 @@ class PCAPdroid:
         tstamp_millis = int((tstamp or time.time()) * 1000)
 
         header = "%u:%u:%s:%u\n" % (tstamp_millis, port, payload_type.value, len(payload))
-        #ctx.log.debug(header)
 
         try:
             self.sock.sendall(header.encode('ascii'))
             self.sock.sendall(payload)
         except socket.error as e:
             if e.errno == errno.EPIPE:
-                ctx.log.info("PCAPdroid closed")
-                ctx.master.shutdown()
+                if not self.shutting_down:
+                    self.shutting_down = True
+                    print("PCAPdroid closed")
+                    ctx.master.shutdown()
             else:
-                ctx.log.error(e)
-                ctx.master.shutdown()
+                if not self.shutting_down:
+                    self.shutting_down = True
+                    print(e)
+                    ctx.master.shutdown()
 
     def getFlowData(self, flow):
         # Extend the flow with additional data
@@ -141,7 +158,6 @@ class PCAPdroid:
     def running(self):
         self.send_message(time.time(), None, None, MsgType.RUNNING, b'')
 
-    # override
     def server_error(self, data: server_hooks.ServerConnectionHookData):
         self.send_message(time.time(), data.client, data.server, MsgType.TCP_ERROR, data.server.error.encode("ascii"))
 
@@ -210,11 +226,11 @@ class PCAPdroid:
 
     # override
     def error(self, flow: http.HTTPFlow):
-        self.send_message(time.time(), flow.context.client, data.context.server, MsgType.HTTP_ERROR, flow.error.encode("ascii"))
+        self.send_message(time.time(), flow.client_conn, flow.server_conn, MsgType.HTTP_ERROR, flow.error.msg.encode("ascii"))
 
     # override
     def tcp_error(self, flow: mitmproxy.tcp.TCPFlow):
-        self.send_message(time.time(), flow.context.client, data.context.server, MsgType.TCP_ERROR, flow.error.encode("ascii"))
+        self.send_message(time.time(), flow.context.client, flow.context.server, MsgType.TCP_ERROR, flow.error.msg.encode("ascii"))
 
     def log(self, msg, lvl=Log.INFO):
         Log.println(lvl, "mitmproxy", msg)
@@ -227,8 +243,7 @@ class PCAPdroid:
     def log_warn(self, msg):
         self.log(msg, lvl=Log.WARN)
 
-    # override
-    def add_log(self, entry: mitmproxy.log.LogEntry):
+    def _add_log(self, entry: LogEntry):
         lvl = str2lvl.get(entry.level, Log.DEBUG)
 
         if lvl >= Log.ERROR:
