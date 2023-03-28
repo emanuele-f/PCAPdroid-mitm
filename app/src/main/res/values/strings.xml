@@ -2,4 +2,12 @@
     <string name="app_name">PCAPdroid mitm</string>
     <string name="mitm_permission_label">control the mitm service</string>
     <string name="mitm_permission_descr">control the mitm service to decrypt the SSL/TLS traffic of the device</string>
+    <string name="intro_text">You can control the mitm addon from the PCAPdroid app</string>
+    <string name="python">Python</string>
+    <string name="mitmproxy">Mitmproxy</string>
+    <string name="cryptography">Cryptography</string>
+    <string name="abi">ABI</string>
+    <string name="openssl">OpenSSL</string>
+    <string name="open_pcapdroid">Open PCAPdroid</string>
+    <string name="addon">Addon</string>
 </resources>
