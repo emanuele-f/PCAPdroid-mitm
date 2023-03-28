@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/intro_text" />
+
+    <TableLayout
+        android:layout_marginTop="30dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/addon" />
+            <TextView
+                android:id="@+id/addon_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="v0.13"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/abi" />
+            <TextView
+                android:id="@+id/abi"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="x86"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/mitmproxy" />
+            <TextView
+                android:id="@+id/mitmproxy_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="9.0.1"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/cryptography" />
+            <TextView
+                android:id="@+id/cryptography_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="38.0.4"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/openssl" />
+            <TextView
+                android:id="@+id/openssl_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="3.0.8"
+                android:textIsSelectable="true" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="4dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.30"
+                android:textStyle="bold"
+                android:text="@string/python" />
+            <TextView
+                android:id="@+id/python_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.80"
+                tools:text="3.10"
+                android:textIsSelectable="true" />
+        </TableRow>
+    </TableLayout>
+</LinearLayout>
