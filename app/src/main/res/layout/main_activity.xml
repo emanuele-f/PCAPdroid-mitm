@@ -130,4 +130,12 @@
                 android:textIsSelectable="true" />
         </TableRow>
     </TableLayout>
+
+    <Button
+        android:id="@+id/open_js_injector"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/open_js_injector"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center" />
 </LinearLayout>

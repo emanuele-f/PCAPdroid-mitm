@@ -10,4 +10,24 @@
     <string name="openssl">OpenSSL</string>
     <string name="open_pcapdroid">Open PCAPdroid</string>
     <string name="addon">Addon</string>
+    <string name="open_js_injector">Open Js Injector</string>
+    <string name="js_injector">Js Injector</string>
+    <string name="hint">Hint</string>
+    <string name="js_injector_hint">Here you can set up Javascript scripts to be injected into HTML pages</string>
+    <string name="add_script">Add script</string>
+    <string name="add_action">Add</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="URL">URL</string>
+    <string name="missing_required_parameter">Missing required parameter</string>
+    <string name="script_already_defined">A script with the same file name exists</string>
+    <string name="empty_list">Empty list</string>
+    <string name="loading">Loading…</string>
+    <string name="version_and_author">v%s – %s</string>
+    <string name="script_download_failed">Download %1$s failed</string>
+    <string name="select_all">Select all</string>
+    <string name="delete">Delete</string>
+    <string name="n_selected">%1$d selected</string>
+    <string name="items_delete_confirm">Delete the selected items?</string>
+    <string name="update">Update</string>
+    <string name="download_in_progress">Script download is already in progress</string>
 </resources>

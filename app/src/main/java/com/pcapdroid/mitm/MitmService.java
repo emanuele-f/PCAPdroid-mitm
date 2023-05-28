@@ -41,6 +41,7 @@ import com.pcapdroid.mitm.MitmAPI.MitmConfig;
 
 public class MitmService extends Service implements Runnable {
     static final String TAG = "Mitmproxy";
+    static MitmService INSTANCE;
     Messenger mMessenger;
     ParcelFileDescriptor mFd;
     Thread mThread;
@@ -52,12 +53,15 @@ public class MitmService extends Service implements Runnable {
         Python py = Python.getInstance();
         mitm = py.getModule("mitm");
 
+        INSTANCE = this;
         super.onCreate();
     }
 
     @Override
     public void onDestroy() {
         _stop();
+
+        INSTANCE = null;
         super.onDestroy();
     }
 
@@ -233,5 +237,11 @@ public class MitmService extends Service implements Runnable {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void reloadJsInjectorScripts() {
+        MitmService instance = INSTANCE;
+        if(instance != null)
+            instance.mitm.callAttr("reloadJsUserscripts");
     }
 }

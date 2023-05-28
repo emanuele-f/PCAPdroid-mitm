@@ -20,6 +20,7 @@
 package com.pcapdroid.mitm;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
 
@@ -48,5 +49,9 @@ public class MainActivity extends Activity {
                 openssl_backend.callAttr("openssl_version_text").toString());
         ((TextView)findViewById(R.id.python_version)).setText(
                 sys.get("version").toString());
+        findViewById(R.id.open_js_injector).setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, JsInjectorActivity.class);
+            startActivity(intent);
+        });
     }
 }

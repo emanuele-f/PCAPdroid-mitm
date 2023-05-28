@@ -15,7 +15,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with PCAPdroid.  If not, see <http://www.gnu.org/licenses/>.
 #
-#  Copyright 2022 - Emanuele Faranda
+#  Copyright 2023 - Emanuele Faranda
 #
 
 import os
@@ -150,7 +150,7 @@ def stop():
     if master:
         master.shutdown()
 
-# Entrypoint: logs a message to
+# Entrypoint: logs a message to console/PCAPdroid
 def log(lvl: int, msg: str):
     if pcapdroid:
         pcapdroid.do_log(msg, lvl)
@@ -182,3 +182,8 @@ def getCAcert() -> str:
     except IOError as e:
         print(e)
         return None
+
+# Entrypoint: reloads the Js Injector userscripts
+def reloadJsUserscripts():
+    if js_injector:
+        js_injector.needs_scripts_reload = True

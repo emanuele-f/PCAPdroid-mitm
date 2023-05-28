@@ -24,14 +24,19 @@ from mitmproxy import http
 from bs4 import BeautifulSoup
 from modules.js_userscript import JsUserscript
 
+scripts_dir = os.path.join(os.environ["HOME"], "js_injector")
+
 class JsInjector:
     def __init__(self):
         self.scripts = []
-        self.scripts_dir = os.path.join(os.path.dirname(__file__), "js")
+        self.needs_scripts_reload = True
         self.reload_scripts()
 
     def response(self, flow: http.HTTPFlow):
         #print(f"[{flow.response.status_code}] {flow.request.pretty_url}")
+
+        if self.needs_scripts_reload:
+            self.reload_scripts()
 
         # inject only for HTML resources
         constent_type = flow.response.headers.get("content-type", "")
@@ -92,23 +97,47 @@ class JsInjector:
         flow.response.text = str(html)
 
     def reload_scripts(self):
-        self.scripts = []
+        self.needs_scripts_reload = False
+        self.scripts = JsInjector.get_scripts()
 
-        try:
-            for fname in os.listdir(self.scripts_dir):
-                fpath = os.path.join(self.scripts_dir, fname)
+        for script in self.scripts:
+            print(f"Loaded \"{script.name}\" v{script.version or ' unknown'}")
+
+    @staticmethod
+    def get_scripts():
+        scripts = []
+
+        os.makedirs(scripts_dir, exist_ok=True)
+
+        for fname in os.listdir(scripts_dir):
+            # used for temporary downloads
+            if fname.endswith(".tmp"):
+                continue
+
+            try:
+                fpath = os.path.join(scripts_dir, fname)
 
                 with open(fpath, "r") as f:
                     script = JsUserscript.parse(f)
+                    script.fname = fname
                     if not script.name:
                         script.name = os.path.splitext(fname)[0]
-                    print(f"Loaded \"{script.name}\" v{script.version}")
-                    self.scripts.append(script)
-        except os.FileNotFoundError:
-            pass
+                    scripts.append(script)
+            except Exception as e:
+                print(f"Loading {fname} failed")
+                print(e)
+                err_script = JsUserscript()
+                err_script.fname = err_script.name = fname
+                err_script.description = "Error: " + str(e)
+                scripts.append(err_script)
+
+        return scripts
+
+    @staticmethod
+    def getScriptPath(script_fname: str) -> str:
+        return os.path.join(scripts_dir, script_fname)
 
 if __name__ == "__main__":
-    injector = JsInjector()
-    injector.reload_scripts()
+    JsInjector.get_scripts()
 elif "addons" in locals():
     addons = [JsInjector()]

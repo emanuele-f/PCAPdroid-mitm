@@ -9,6 +9,7 @@ class JsUserscript:
         self.match = []
         self.require = []
         self.content = ""
+        self.fname = ""
 
     """
     Parses a userscript header in the Tampermonkey syntax.
@@ -35,8 +36,8 @@ class JsUserscript:
                 space = line.find(" ")
 
                 if space > 0:
-                    key = line[1:space]
-                    value = line[space+1:]
+                    key = line[1:space].strip()
+                    value = line[space+1:].strip()
 
                     if (key == "match"):
                         script.match.append(UrlMatcher(value))
@@ -47,6 +48,9 @@ class JsUserscript:
 
         for line in stream:
             content.append(line)
+
+        if script.version.startswith('v.'):
+            script.version = script.version[2:]
 
         script.content = "".join(content)
         return script
