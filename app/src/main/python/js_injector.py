@@ -45,17 +45,16 @@ class JsInjector:
 
         # https://docs.mitmproxy.org/stable/api/mitmproxy/http.html#HTTPFlow
         request =  flow.request
-        script = None
+        scripts = []
 
         for s in self.scripts:
             if s.matches(request.scheme, request.pretty_host, request.path):
-                script = s
-                break
+                scripts.append(s)
 
-        if not script:
+        if not scripts:
             return
 
-        print(f"\"{script.name}\" script matches {request.pretty_url}")
+        print(f"\"{[s.name for s in scripts]}\" match {request.pretty_url}")
 
         # IMPORTANT: delete these, otherwise it may upgrade the connection to QUIC
         # You may also need to block the QUIC protocol, as it seems like chrome still tries to use QUIC
@@ -83,17 +82,19 @@ class JsInjector:
             print(f"Parsing HTML in {request.pretty_url} failed")
             return
 
-        # Inject the script
-        tag = html.new_tag("script", type="application/javascript")
-        tag.insert(0, script.content)
-        html.body.insert(0, tag)
-
-        # Inject dependencies before the script
-        for dep_js in reversed(script.require):
-            tag = html.new_tag("script", type="text/javascript", src=dep_js)
+        for script in reversed(scripts):
+            # Inject the scripts
+            tag = html.new_tag("script", type="application/javascript")
+            tag.insert(0, script.content)
             html.body.insert(0, tag)
 
-        print(f"\"{script.name}\" script injected to {request.pretty_url}")
+            # Inject dependencies before the script
+            for dep_js in reversed(script.require):
+                tag = html.new_tag("script", type="text/javascript", src=dep_js)
+                html.body.insert(0, tag)
+
+            print(f"\"{script.name}\" script injected to {request.pretty_url}")
+
         flow.response.text = str(html)
 
     def reload_scripts(self):

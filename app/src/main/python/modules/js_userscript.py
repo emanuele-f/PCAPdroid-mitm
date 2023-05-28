@@ -33,15 +33,14 @@ class JsUserscript:
 
             line = line[3:]
             if line.startswith("@"):
-                space = line.find(" ")
+                parts = line[1:].split(None, 1)
 
-                if space > 0:
-                    key = line[1:space].strip()
-                    value = line[space+1:].strip()
+                if len(parts) == 2:
+                    key, value = parts
 
-                    if (key == "match"):
+                    if key == "match":
                         script.match.append(UrlMatcher(value))
-                    elif (key == "require"):
+                    elif key == "require":
                         script.require.append(value)
                     elif key in mapped_attr:
                         setattr(script, key, value)
