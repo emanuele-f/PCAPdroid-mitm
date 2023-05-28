@@ -30,6 +30,7 @@ from mitmproxy.certs import CertStore, Cert
 from mitmproxy.proxy import server_hooks
 from mitmproxy.proxy.events import OpenConnectionCompleted
 from pcapdroid import PCAPdroid, AddonOpts
+from js_injector import JsInjector
 from pathlib import Path
 import mitmproxy
 import traceback
@@ -39,6 +40,7 @@ import sys
 
 master = None
 pcapdroid = None
+js_injector = None
 running = False
 
 orig_stdout = sys.stdout
@@ -86,20 +88,24 @@ def server_event_proxy(handler, event):
 def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm_args: str):
     global master
     global running
-    global pcapdroid
+    global pcapdroid, js_injector
     running = True
 
     try:
         with socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) as sock:
             async def main():
                 global master
-                global pcapdroid
+                global pcapdroid, js_injector
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
                 # instantiate PCAPdroid early to send error log via the API
                 pcapdroid = PCAPdroid(sock, AddonOpts(dump_client, dump_keylog, short_payload))
                 master.addons.add(pcapdroid)
+
+                # JsInjector addon
+                js_injector = JsInjector()
+                master.addons.add(js_injector)
 
                 print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)
@@ -129,6 +135,7 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm
     master = None
     running = False
     pcapdroid = None
+    js_injector = None
 
 # Entrypoint: stops the running mitmproxy
 def stop():

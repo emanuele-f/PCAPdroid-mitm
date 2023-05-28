@@ -29,7 +29,7 @@ from mitmproxy.proxy import server_hooks
 from mitmproxy.log import LogEntry
 from enum import Enum
 from java import jclass
-from callback_logger import CallbackLogger
+from modules.callback_logger import CallbackLogger
 
 Log = jclass("android.util.Log")
 
