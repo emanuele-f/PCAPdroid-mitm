@@ -64,6 +64,7 @@ class MsgType(Enum):
     DATA_TRUNCATED = "trunc"
     MASTER_SECRET = "secret"
     LOG = "log"
+    JS_INJECTED = "js_inject"
 
 # pcapdroid per-flow state
 class FlowData:
@@ -171,6 +172,10 @@ class PCAPdroid:
     # override
     def response(self, flow: http.HTTPFlow) -> None:
         if flow.response:
+            if hasattr(flow, "js_injector_scripts"):
+                self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn,
+                                  MsgType.JS_INJECTED, flow.js_injector_scripts.encode("ascii"))
+
             data = self.checkPayload(flow, assemble_response(flow.response), req=False)
             if data:
                 self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REPLY, data)

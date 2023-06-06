@@ -97,6 +97,10 @@ class JsInjector:
 
         flow.response.text = str(html)
 
+        scripts_log = ", ".join([script.name for script in scripts])
+        scripts_log = (scripts_log[:24] + "...") if len(scripts_log) > 24 else scripts_log
+        flow.js_injector_scripts = scripts_log
+
     def reload_scripts(self):
         self.needs_scripts_reload = False
         self.scripts = JsInjector.get_scripts()

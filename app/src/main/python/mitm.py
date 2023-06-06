@@ -99,13 +99,13 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
+                # JsInjector addon (before PCAPdroid)
+                js_injector = JsInjector()
+                master.addons.add(js_injector)
+
                 # instantiate PCAPdroid early to send error log via the API
                 pcapdroid = PCAPdroid(sock, AddonOpts(dump_client, dump_keylog, short_payload))
                 master.addons.add(pcapdroid)
-
-                # JsInjector addon
-                js_injector = JsInjector()
-                master.addons.add(js_injector)
 
                 print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)
