@@ -2,6 +2,7 @@ package com.pcapdroid.mitm;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -9,6 +10,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -263,16 +266,21 @@ public class JsInjectorActivity extends Activity {
     }
 
     private void showHintDialog(int id) {
-        String msg = getResources().getString(id);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.hint);
-        builder.setMessage(msg);
+        builder.setMessage(getString(id));
         builder.setCancelable(true);
         builder.setNeutralButton(android.R.string.ok,
                 (dialog, id1) -> dialog.cancel());
 
         AlertDialog alert = builder.create();
         alert.show();
+
+        TextView message = (TextView)alert.findViewById(android.R.id.message);
+        if(message != null) {
+            message.setMovementMethod(LinkMovementMethod.getInstance());
+            message.setText(id);
+        }
     }
 
     private void showAddScriptDialog() {

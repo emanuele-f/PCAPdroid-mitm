@@ -20,9 +20,11 @@
 package com.pcapdroid.mitm;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
@@ -49,6 +51,17 @@ public class MainActivity extends Activity {
                 openssl_backend.callAttr("openssl_version_text").toString());
         ((TextView)findViewById(R.id.python_version)).setText(
                 sys.get("version").toString());
+        findViewById(R.id.open_pcapdroid).setOnClickListener(v -> {
+            try {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.emanuelef.remote_capture");
+                if(intent != null) {
+                    startActivity(intent);
+                    return;
+                }
+            } catch (ActivityNotFoundException | SecurityException ignored) {}
+
+            (Toast.makeText(this, R.string.app_not_found, Toast.LENGTH_SHORT)).show();
+        });
         findViewById(R.id.open_js_injector).setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, JsInjectorActivity.class);
             startActivity(intent);

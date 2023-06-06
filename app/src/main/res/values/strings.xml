@@ -10,10 +10,9 @@
     <string name="openssl">OpenSSL</string>
     <string name="open_pcapdroid">Open PCAPdroid</string>
     <string name="addon">Addon</string>
-    <string name="open_js_injector">Open Js Injector</string>
     <string name="js_injector">Js Injector</string>
     <string name="hint">Hint</string>
-    <string name="js_injector_hint">Here you can set up Javascript scripts to be injected into HTML pages</string>
+    <string name="js_injector_hint">The Js Injector allows you to inject Javascript code into web pages. Check out the <a href="https://emanuele-f.github.io/PCAPdroid/advanced_features#46-js-injector">PCAPdroid user guide</a> for more details</string>
     <string name="add_script">Add script</string>
     <string name="add_action">Add</string>
     <string name="cancel_action">Cancel</string>
@@ -30,4 +29,5 @@
     <string name="items_delete_confirm">Delete the selected items?</string>
     <string name="update">Update</string>
     <string name="download_in_progress">Script download is already in progress</string>
+    <string name="app_not_found">App not found</string>
 </resources>

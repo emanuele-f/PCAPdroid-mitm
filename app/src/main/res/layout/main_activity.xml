@@ -132,10 +132,18 @@
     </TableLayout>
 
     <Button
+        android:id="@+id/open_pcapdroid"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/open_pcapdroid"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center" />
+
+    <Button
         android:id="@+id/open_js_injector"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/open_js_injector"
-        android:layout_marginTop="20dp"
+        android:text="@string/js_injector"
+        android:layout_marginTop="10dp"
         android:layout_gravity="center" />
 </LinearLayout>
