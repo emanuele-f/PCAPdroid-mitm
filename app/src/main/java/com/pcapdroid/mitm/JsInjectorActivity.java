@@ -1,8 +1,26 @@
+/*
+ * This file is part of PCAPdroid.
+ *
+ * PCAPdroid is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PCAPdroid is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PCAPdroid.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Copyright 2023 - Emanuele Faranda
+ */
+
 package com.pcapdroid.mitm;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -10,8 +28,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
-import android.text.TextUtils;
-import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -248,7 +264,7 @@ public class JsInjectorActivity extends Activity {
         int id = item.getItemId();
 
         if(id == R.id.show_hint) {
-            showHintDialog(R.string.js_injector_hint);
+            Utils.showHintDialog(this, R.string.js_injector_hint);
             return true;
         } else if(id == R.id.add) {
             showAddScriptDialog();
@@ -260,27 +276,10 @@ public class JsInjectorActivity extends Activity {
             }
 
             refreshScripts();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private void showHintDialog(int id) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.hint);
-        builder.setMessage(getString(id));
-        builder.setCancelable(true);
-        builder.setNeutralButton(android.R.string.ok,
-                (dialog, id1) -> dialog.cancel());
-
-        AlertDialog alert = builder.create();
-        alert.show();
-
-        TextView message = (TextView)alert.findViewById(android.R.id.message);
-        if(message != null) {
-            message.setMovementMethod(LinkMovementMethod.getInstance());
-            message.setText(id);
-        }
     }
 
     private void showAddScriptDialog() {

@@ -39,9 +39,14 @@
         </activity>
 
         <activity
-            android:name=".JsInjectorActivity"
+            android:name=".AddonsActivity"
             android:launchMode="singleTop"
             android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".JsInjectorActivity"
+            android:launchMode="singleTop"
+            android:parentActivityName=".AddonsActivity" />
 
         <service
             android:name=".MitmService"

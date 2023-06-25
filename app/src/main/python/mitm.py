@@ -21,6 +21,7 @@
 import os
 
 MITMPROXY_CONF_DIR = os.environ["HOME"] + "/.mitmproxy"
+USER_ADDONS_DIR = os.environ["HOME"] + "/mitmproxy-addons"
 CA_CERT_PATH = MITMPROXY_CONF_DIR + "/mitmproxy-ca-cert.cer"
 
 from mitmproxy import options
@@ -37,6 +38,7 @@ import traceback
 import socket
 import asyncio
 import sys
+import importlib
 
 master = None
 pcapdroid = None
@@ -83,9 +85,26 @@ def server_event_proxy(handler, event):
             pcapdroid.server_error(hook_data)
     return orig_server_event(handler, event)
 
+def load_addon(modname, addons):
+    try:
+        m = importlib.import_module(modname)
+        if m and hasattr(m, "addons") and isinstance(m.addons, list):
+            for addon in m.addons:
+                addons.add(addon)
+    except Exception:
+        sys.stderr.write("Failed to load addon " + modname)
+        sys.stderr.write(traceback.format_exc())
+
+def jarray_to_set(arr):
+    rv = set()
+    for elem in arr:
+        rv.add(elem)
+    return rv
+
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm_args: str):
+def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
+        short_payload: bool, mitm_args: str):
     global master
     global running
     global pcapdroid, js_injector
@@ -99,13 +118,27 @@ def run(fd: int, dump_client: bool, dump_keylog: bool, short_payload: bool, mitm
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
-                # JsInjector addon (before PCAPdroid)
-                js_injector = JsInjector()
-                master.addons.add(js_injector)
-
                 # instantiate PCAPdroid early to send error log via the API
                 pcapdroid = PCAPdroid(sock, AddonOpts(dump_client, dump_keylog, short_payload))
+
+                enabled_addons = jarray_to_set(jenabled_addons)
+
+                # Load addons (order is important)
                 master.addons.add(pcapdroid)
+
+                # JsInjector addon
+                if "Js Injector" in enabled_addons:
+                    js_injector = JsInjector()
+                    master.addons.add(js_injector)
+
+                sys.path.append(USER_ADDONS_DIR)
+                for f in os.listdir(USER_ADDONS_DIR):
+                    if f.endswith(".py"):
+                        fname = f[:-3]
+
+                        if fname in enabled_addons:
+                            print("Loading addon: " + f)
+                            load_addon(fname, master.addons)
 
                 print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)

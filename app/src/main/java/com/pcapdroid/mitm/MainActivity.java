@@ -62,8 +62,8 @@ public class MainActivity extends Activity {
 
             (Toast.makeText(this, R.string.app_not_found, Toast.LENGTH_SHORT)).show();
         });
-        findViewById(R.id.open_js_injector).setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, JsInjectorActivity.class);
+        findViewById(R.id.addons).setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, AddonsActivity.class);
             startActivity(intent);
         });
     }

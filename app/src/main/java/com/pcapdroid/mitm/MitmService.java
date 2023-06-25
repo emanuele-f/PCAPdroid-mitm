@@ -36,6 +36,7 @@ import com.chaquo.python.Python;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.Set;
 
 import com.pcapdroid.mitm.MitmAPI.MitmConfig;
 
@@ -47,11 +48,17 @@ public class MitmService extends Service implements Runnable {
     Thread mThread;
     PyObject mitm;
     MitmConfig mConf;
+    String m_home;
 
     @Override
     public void onCreate() {
         Python py = Python.getInstance();
         mitm = py.getModule("mitm");
+
+        PyObject os = py.getModule("os");
+        PyObject env = os.get("environ");
+        m_home = env.callAttr("get", "HOME").toString();
+        Log.d(TAG, "Chaquopy home at " + m_home);
 
         INSTANCE = this;
         super.onCreate();
@@ -157,8 +164,12 @@ public class MitmService extends Service implements Runnable {
         // Transparent mode is used with root mode where we capture the internet interface, so we must dump the server connection
         boolean dump_client = !mConf.transparentMode;
 
+        AddonsActivity.copyAddonsToPrivDir(this, m_home);
+        String[] enabled_addons = AddonsActivity.getEnabledAddons(this).toArray(new String[]{});
+
         try {
-            mitm.callAttr("run", mFd.getFd(), dump_client, mConf.dumpMasterSecrets, mConf.shortPayload, args);
+            mitm.callAttr("run", mFd.getFd(), enabled_addons, dump_client,
+                    mConf.dumpMasterSecrets, mConf.shortPayload, args);
         } finally {
             try {
                 if(mFd != null)
@@ -243,5 +254,9 @@ public class MitmService extends Service implements Runnable {
         MitmService instance = INSTANCE;
         if(instance != null)
             instance.mitm.callAttr("reloadJsUserscripts");
+    }
+
+    public static boolean isRunning() {
+        return (INSTANCE != null);
     }
 }

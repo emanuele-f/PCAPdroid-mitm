@@ -30,4 +30,10 @@
     <string name="update">Update</string>
     <string name="download_in_progress">Script download is already in progress</string>
     <string name="app_not_found">App not found</string>
+    <string name="addons">Addons</string>
+    <string name="specify_user_dir">Select the directory where your custom scripts are located</string>
+    <string name="user_addon">User addon</string>
+    <string name="set_user_dir">Set user dir</string>
+    <string name="addons_hint">You can create mitmproxy addons to implement your custom logic. Select a user directory and place your scripts there</string>
+    <string name="restart_to_apply">Restart the capture to apply the changes</string>
 </resources>
