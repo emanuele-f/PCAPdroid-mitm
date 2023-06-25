@@ -53,7 +53,14 @@ public class MainActivity extends Activity {
                 sys.get("version").toString());
         findViewById(R.id.open_pcapdroid).setOnClickListener(v -> {
             try {
-                Intent intent = getPackageManager().getLaunchIntentForPackage("com.emanuelef.remote_capture");
+                Intent intent = null;
+                try {
+                    intent = getPackageManager().getLaunchIntentForPackage("com.emanuelef.remote_capture");
+                } catch (ActivityNotFoundException ignored) {}
+
+                if(intent == null)
+                    intent = getPackageManager().getLaunchIntentForPackage("com.emanuelef.remote_capture.debug");
+
                 if(intent != null) {
                     startActivity(intent);
                     return;

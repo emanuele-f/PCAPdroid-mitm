@@ -4,6 +4,7 @@
 
     <queries>
         <package android:name="com.emanuelef.remote_capture" />
+        <package android:name="com.emanuelef.remote_capture.debug" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
