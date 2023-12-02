@@ -9,14 +9,6 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <permission
-        android:name="com.pcapdroid.permission.MITM"
-        android:label="@string/mitm_permission_label"
-        android:description="@string/mitm_permission_descr"
-        android:protectionLevel="dangerous"
-        android:permission="com.pcapdroid.permission.MITM"
-        tools:targetApi="s" />
-
     <!-- PyApplication is equivalent to Python.start -->
     <application
         android:name="com.chaquo.python.android.PyApplication"
