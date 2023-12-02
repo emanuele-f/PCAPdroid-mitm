@@ -12,12 +12,12 @@ android {
             keyPassword 'android'
         }
     }
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.pcapdroid.mitm"
         minSdk 21
-        targetSdk 33
+        targetSdk 34
         versionCode 16
         versionName "0.16"
 

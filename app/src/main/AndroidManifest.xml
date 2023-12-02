@@ -8,6 +8,7 @@
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- PyApplication is equivalent to Python.start -->
     <application
@@ -16,7 +17,6 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true"
-        android:allowBackup="false"
         android:supportsRtl="true"
         tools:targetApi="m">
 
@@ -44,6 +44,11 @@
         <service
             android:name=".MitmService"
             android:exported="true"
-            tools:ignore="ExportedService" />
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ExportedService">
+
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="run mitmproxy in the background"/>
+        </service>
     </application>
 </manifest>
