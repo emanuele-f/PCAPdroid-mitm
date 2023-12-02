@@ -131,14 +131,15 @@ def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
                     js_injector = JsInjector()
                     master.addons.add(js_injector)
 
-                sys.path.append(USER_ADDONS_DIR)
-                for f in os.listdir(USER_ADDONS_DIR):
-                    if f.endswith(".py"):
-                        fname = f[:-3]
+                if os.path.exists(USER_ADDONS_DIR):
+                    sys.path.append(USER_ADDONS_DIR)
+                    for f in os.listdir(USER_ADDONS_DIR):
+                        if f.endswith(".py"):
+                            fname = f[:-3]
 
-                        if fname in enabled_addons:
-                            print("Loading addon: " + f)
-                            load_addon(fname, master.addons)
+                            if fname in enabled_addons:
+                                print("Loading addon: " + f)
+                                load_addon(fname, master.addons)
 
                 print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)
