@@ -14,13 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with PCAPdroid.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Copyright 2022 - Emanuele Faranda
+ * Copyright 2022-24 - Emanuele Faranda
  */
 
 package com.pcapdroid.mitm;
 
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -29,6 +33,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.chaquo.python.PyObject;
@@ -36,7 +41,6 @@ import com.chaquo.python.Python;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.Set;
 
 import com.pcapdroid.mitm.MitmAPI.MitmConfig;
 
@@ -50,6 +54,7 @@ public class MitmService extends Service implements Runnable {
     MitmConfig mConf;
     String m_home;
 
+    @SuppressLint("BatteryLife")
     @Override
     public void onCreate() {
         Python py = Python.getInstance();
@@ -122,6 +127,9 @@ public class MitmService extends Service implements Runnable {
                     log_w("Not supported while mitm running");
                     replyWithError(msg.replyTo);
                 }
+                break;
+            case MitmAPI.MSG_DISABLE_DOZE:
+                askDisableDoze();
                 break;
             default:
                 log_w("Unknown message: " + msg.what);
@@ -236,6 +244,21 @@ public class MitmService extends Service implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    @SuppressLint("BatteryLife")
+    @TargetApi(Build.VERSION_CODES.M)
+    private void askDisableDoze() {
+        // NOTE: when the app is battery-optimized, MITM may get stuck, requiring a device reboot
+        // to work again
+        Log.i(TAG, "Ask to disable doze");
+
+        Intent intent = new Intent();
+        intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        intent.setData(Uri.parse("package:" + BuildConfig.APPLICATION_ID));
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        startActivity(intent);
     }
 
     private void replyWithError(Messenger replyTo) {
