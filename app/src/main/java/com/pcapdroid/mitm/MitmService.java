@@ -172,7 +172,7 @@ public class MitmService extends Service implements Runnable {
         // Transparent mode is used with root mode where we capture the internet interface, so we must dump the server connection
         boolean dump_client = !mConf.transparentMode;
 
-        AddonsActivity.copyAddonsToPrivDir(this, m_home);
+        AddonsActivity.copyAddonsToPrivDir(this, m_home + "/mitmproxy-addons");
         String[] enabled_addons = AddonsActivity.getEnabledAddons(this).toArray(new String[]{});
 
         try {

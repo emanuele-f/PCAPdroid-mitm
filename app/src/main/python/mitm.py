@@ -92,7 +92,7 @@ def load_addon(modname, addons):
             for addon in m.addons:
                 addons.add(addon)
     except Exception:
-        sys.stderr.write("Failed to load addon " + modname)
+        sys.stderr.write("Failed to load addon \"" + modname + "\"")
         sys.stderr.write(traceback.format_exc())
 
 def jarray_to_set(arr):
@@ -138,7 +138,7 @@ def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
                             fname = f[:-3]
 
                             if fname in enabled_addons:
-                                print("Loading addon: " + f)
+                                print("Loading user addon: " + f)
                                 load_addon(fname, master.addons)
 
                 print("mitmdump " + mitm_args)
