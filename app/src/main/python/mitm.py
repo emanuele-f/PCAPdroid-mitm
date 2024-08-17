@@ -87,8 +87,17 @@ def server_event_proxy(handler, event):
 
 def load_addon(modname, addons):
     try:
+        existing_module = modname in sys.modules
+
         m = importlib.import_module(modname)
-        if m and hasattr(m, "addons") and isinstance(m.addons, list):
+        if not m:
+            return
+
+        if existing_module:
+            # reload the module if already loaded in a previous execution
+            importlib.reload(m)
+
+        if hasattr(m, "addons") and isinstance(m.addons, list):
             for addon in m.addons:
                 addons.add(addon)
     except Exception:
@@ -133,6 +142,8 @@ def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
 
                 if os.path.exists(USER_ADDONS_DIR):
                     sys.path.append(USER_ADDONS_DIR)
+                    importlib.invalidate_caches()
+
                     for f in os.listdir(USER_ADDONS_DIR):
                         if f.endswith(".py"):
                             fname = f[:-3]
