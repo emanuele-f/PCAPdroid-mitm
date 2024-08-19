@@ -120,7 +120,14 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
     // get the file name of the enabled addons
     public static Set<String> getEnabledAddons(Context ctx) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        return prefs.getStringSet(ENABLED_ADDONS_PREF, new HashSet<>());
+
+        HashSet<String> s = new HashSet<>();
+        Set<String> rv = prefs.getStringSet(ENABLED_ADDONS_PREF, s);
+        if (!rv.isEmpty())
+            // Use a copy as the set returned by getStringSet cannot be modified
+            s.addAll(rv);
+
+        return s;
     }
 
     private void recheckListSize() {
