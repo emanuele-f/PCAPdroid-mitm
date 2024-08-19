@@ -18,7 +18,7 @@ def getAppVersion():
   with open("app/build.gradle") as gradle:
     for line in gradle:
       if "versionName" in line:
-          m = re.findall("versionName\s*\"([^\"]+)\"", line)
+          m = re.findall(r"versionName\s*\"([^\"]+)\"", line)
           if m:
             appver = m[0]
 
