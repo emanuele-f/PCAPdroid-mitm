@@ -19,11 +19,13 @@
 
 package com.pcapdroid.mitm;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.UriPermission;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -31,6 +33,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.DocumentsContract;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -49,6 +52,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class AddonsActivity extends Activity implements AddonsAdapter.AddonListener {
@@ -56,6 +60,7 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
     private static final String USER_DIR_PREF = "user-dir";
     private static final String ENABLED_ADDONS_PREF = "enabled-addons";
     private static final int OPEN_DIR_TREE_CODE = 1;
+    private static final int REQUEST_FILES_ACCESS_CODE = 2;
 
     private TextView mEmptyText;
     private SharedPreferences mPrefs;
@@ -88,10 +93,10 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
                 Addon.AddonType.JsInjector));
 
         // User addons
-        Uri publicUri = Uri.parse(mPrefs.getString(USER_DIR_PREF, ""));
+        Uri publicUri = getUserDir(this);
         String descr = getString(R.string.user_addon);
 
-        if((publicUri.getHost() != null) && hasUriPersistablePermission(this, publicUri)) {
+        if(publicUri != null) {
             for (Uri uri : listUserAddons(this, publicUri)) {
                 String path = uri.getPath();
                 int slash = path.lastIndexOf("/");
@@ -148,26 +153,36 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
 
     /* Since we can only access the addons dir via the ContentResolver, we copy all the addons
      * to the app private dir to make python import work. */
-    public static boolean copyAddonsToPrivDir(Context ctx, String privDir) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        Uri publicUri = Uri.parse(prefs.getString(USER_DIR_PREF, ""));
-
-        if((publicUri.getHost() == null) || !hasUriPersistablePermission(ctx, publicUri))
+    public static boolean copyAddonsToPrivDir(Context ctx, File privAddons) {
+        Uri publicUri = getUserDir(ctx);
+        if (publicUri == null)
             return false;
 
-        File privAddons = new File(privDir);
-        privAddons.delete();
         privAddons.mkdirs();
 
+        // delete all existing .py files, but not the other kind of files, possibly created by the addons
+        for (File f : Objects.requireNonNull(privAddons.listFiles())) {
+            String name = f.getName();
+            if (name.endsWith(".py") || (name.equals("__pycache__")))
+                f.delete();
+        }
+
         Uri srcFolder = DocumentsContract.buildChildDocumentsUriUsingTree(publicUri, DocumentsContract.getTreeDocumentId(publicUri));
-        Log.d(TAG, "Addons source dir: " + srcFolder);
+        Log.d(TAG, "Copying public addons from: " + srcFolder + " to " + privAddons);
         List<Uri> addonsUris = listUserAddons(ctx, publicUri);
 
         for(Uri srcUri: addonsUris) {
             String path = srcUri.getPath();
+            if (path == null)
+                continue;
+
             int slash = path.lastIndexOf("/");
             if (slash > 0) {
                 String srcFname = path.substring(slash + 1);
+
+                if (!srcFname.endsWith(".py"))
+                    continue;
+
                 File outFile = new File(privAddons.getAbsolutePath() + "/" + srcFname);
                 Log.d(TAG, "Found addon: " + srcFname);
 
@@ -193,17 +208,6 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
         return true;
     }
 
-    private static boolean hasUriPersistablePermission(Context ctx, Uri uri) {
-        List<UriPermission> persistableUris = ctx.getContentResolver().getPersistedUriPermissions();
-
-        for(UriPermission perm: persistableUris) {
-            if(perm.getUri().equals(uri) && perm.isReadPermission())
-                return true;
-        }
-
-        return false;
-    }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -223,6 +227,9 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
             return true;
         } else if(id == R.id.select_user_dir) {
             selectUserDir();
+            return true;
+        } else if(id == R.id.enable_files_access) {
+            enableFilesAccess();
             return true;
         }
 
@@ -246,14 +253,79 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
         if((requestCode == OPEN_DIR_TREE_CODE) && (resultCode == RESULT_OK) && (resultData != null)) {
             Uri user_dir = resultData.getData();
 
-            // Persist access across restarts
-            getContentResolver().takePersistableUriPermission(user_dir, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (user_dir != null) {
+                // Persist access across restarts
+                getContentResolver().takePersistableUriPermission(user_dir, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-            mPrefs.edit()
-                    .putString(USER_DIR_PREF, user_dir.toString())
-                    .apply();
+                mPrefs.edit()
+                        .putString(USER_DIR_PREF, user_dir.toString())
+                        .apply();
 
-            refreshAddons();
+                refreshAddons();
+            }
+        }
+    }
+
+    public static Uri getUserDir(Context ctx) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        Uri publicUri = Uri.parse(prefs.getString(AddonsActivity.USER_DIR_PREF, ""));
+
+        if ((publicUri.getHost() == null) || !Utils.hasPersistableReadPermission(ctx, publicUri))
+            return null;
+
+        // use buildDocumentUriUsingTree so that it can be used with Utils.uriToFilePath
+        return DocumentsContract.buildDocumentUriUsingTree(publicUri,
+                DocumentsContract.getTreeDocumentId(publicUri));
+    }
+
+    public static boolean hasFilesAccess(Context ctx) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return ctx.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                    ctx.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        } else
+            // on older Android versions, it's automatically granted
+            return true;
+    }
+
+    private void enableFilesAccess() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.enable_files_access)
+                .setMessage(R.string.enable_files_access_info)
+                .setPositiveButton(R.string.enable, (dialogInterface, i) -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Intent intent = new Intent();
+                        intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.fromParts("package", this.getPackageName(), null));
+                        startActivityForResult(intent, REQUEST_FILES_ACCESS_CODE);
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (hasFilesAccess(this)) {
+                            Toast.makeText(this, R.string.permission_already_granted, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        requestPermissions(
+                                new String[] {
+                                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                        Manifest.permission.READ_EXTERNAL_STORAGE
+                                },
+                                REQUEST_FILES_ACCESS_CODE
+                        );
+                    }
+                })
+                .setNeutralButton(android.R.string.cancel, (dialogInterface, i) -> {})
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQUEST_FILES_ACCESS_CODE) {
+            boolean granted = (grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED);
+            Log.d(TAG, "Request files access: granted=" + granted);
+
+            if (!granted)
+                (Toast.makeText(this, R.string.files_access_not_granted, Toast.LENGTH_LONG)).show();
         }
     }
 

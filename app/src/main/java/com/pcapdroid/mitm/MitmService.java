@@ -19,13 +19,16 @@
 
 package com.pcapdroid.mitm;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -39,6 +42,7 @@ import android.util.Log;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
@@ -172,11 +176,20 @@ public class MitmService extends Service implements Runnable {
         // Transparent mode is used with root mode where we capture the internet interface, so we must dump the server connection
         boolean dump_client = !mConf.transparentMode;
 
-        AddonsActivity.copyAddonsToPrivDir(this, m_home + "/mitmproxy-addons");
         String[] enabled_addons = AddonsActivity.getEnabledAddons(this).toArray(new String[]{});
 
+        File addons_home = getWritablePublicAddonsHome();
+        if (addons_home == null) {
+            Log.w(TAG, "Addons will write to the app private dir");
+            addons_home = new File(m_home + "/mitmproxy-addons");
+            AddonsActivity.copyAddonsToPrivDir(this, addons_home);
+        }
+        addons_home.mkdirs();
+
+        Log.i(TAG, "Addons home: " + addons_home);
+
         try {
-            mitm.callAttr("run", mFd.getFd(), enabled_addons, dump_client,
+            mitm.callAttr("run", mFd.getFd(), enabled_addons, addons_home.toString(), dump_client,
                     mConf.dumpMasterSecrets, mConf.shortPayload, args);
         } finally {
             try {
@@ -205,6 +218,29 @@ public class MitmService extends Service implements Runnable {
         }
 
         stopSelf();
+    }
+
+    private File getWritablePublicAddonsHome() {
+        if (!AddonsActivity.hasFilesAccess(this))
+            return null;
+
+        Uri userDir = AddonsActivity.getUserDir(this);
+        if (userDir == null)
+            return null;
+
+        File home = null;
+        String fpath = Utils.uriToFilePath(this, userDir);
+
+        if (fpath != null) {
+            try {
+                home = new File(fpath);
+            } catch (Exception ignored) {}
+        }
+
+        if (home == null)
+            Log.w(TAG, "Cannot determine user dir real path");
+
+        return home;
     }
 
     private void log_i(String msg) {

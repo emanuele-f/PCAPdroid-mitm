@@ -34,4 +34,9 @@
     <string name="set_user_dir">Set user dir</string>
     <string name="addons_hint">You can create mitmproxy addons to implement your custom logic. Select a user directory and place your scripts there</string>
     <string name="restart_to_apply">Restart the capture to apply the changes</string>
+    <string name="enable_files_access">Enable files access</string>
+    <string name="enable_files_access_info">To allow addons to write files in the public user directory, it\'s necessary to grant this app access to the device storage. Addons will be able to read and write arbitrary files, so be sure to only use trusted addons!</string>
+    <string name="enable">Enable</string>
+    <string name="permission_already_granted">Permission already granted</string>
+    <string name="files_access_not_granted">Files access was not granted</string>
 </resources>

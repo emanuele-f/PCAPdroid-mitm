@@ -21,7 +21,6 @@
 import os
 
 MITMPROXY_CONF_DIR = os.environ["HOME"] + "/.mitmproxy"
-USER_ADDONS_DIR = os.environ["HOME"] + "/mitmproxy-addons"
 CA_CERT_PATH = MITMPROXY_CONF_DIR + "/mitmproxy-ca-cert.cer"
 
 from mitmproxy import options
@@ -112,8 +111,8 @@ def jarray_to_set(arr):
 
 # Entrypoint: runs mitmproxy
 # From mitmproxy.tools.main.run, without the signal handlers
-def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
-        short_payload: bool, mitm_args: str):
+def run(fd: int, jenabled_addons, addons_home: str, dump_client: bool,
+        dump_keylog: bool, short_payload: bool, mitm_args: str):
     global master
     global running
     global pcapdroid, js_injector
@@ -130,6 +129,13 @@ def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
                 # instantiate PCAPdroid early to send error log via the API
                 pcapdroid = PCAPdroid(sock, AddonOpts(dump_client, dump_keylog, short_payload))
 
+                if addons_home:
+                    try:
+                        os.chdir(addons_home)
+                    except Exception:
+                        sys.stderr.write("Cannot change directory")
+                        print(traceback.format_exc())
+
                 enabled_addons = jarray_to_set(jenabled_addons)
 
                 # Load addons (order is important)
@@ -140,11 +146,11 @@ def run(fd: int, jenabled_addons, dump_client: bool, dump_keylog: bool,
                     js_injector = JsInjector()
                     master.addons.add(js_injector)
 
-                if os.path.exists(USER_ADDONS_DIR):
-                    sys.path.append(USER_ADDONS_DIR)
+                if os.path.exists(addons_home):
+                    sys.path.append(addons_home)
                     importlib.invalidate_caches()
 
-                    for f in os.listdir(USER_ADDONS_DIR):
+                    for f in os.listdir(addons_home):
                         if f.endswith(".py"):
                             fname = f[:-3]
 

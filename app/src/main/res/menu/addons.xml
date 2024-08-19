@@ -21,4 +21,10 @@
         android:title="@string/set_user_dir"
         android:orderInCategory="20"
         android:showAsAction="never" />
+
+    <item
+        android:id="@+id/enable_files_access"
+        android:title="@string/enable_files_access"
+        android:orderInCategory="30"
+        android:showAsAction="never" />
 </menu>
