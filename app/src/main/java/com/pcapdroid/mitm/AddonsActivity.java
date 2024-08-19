@@ -219,6 +219,11 @@ public class AddonsActivity extends Activity implements AddonsAdapter.AddonListe
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.addons, menu);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            // on Android 22 or earlier it's not necessary to request the permission
+            menu.findItem(R.id.enable_files_access).setVisible(false);
+
         return true;
     }
 
