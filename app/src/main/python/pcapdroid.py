@@ -159,7 +159,7 @@ class PCAPdroid:
     def running(self):
         self.send_message(time.time(), None, None, MsgType.RUNNING, b'')
 
-    def server_error(self, data: server_hooks.ServerConnectionHookData):
+    def server_connect_error(self, data: server_hooks.ServerConnectionHookData):
         self.send_message(time.time(), data.client, data.server, MsgType.TCP_ERROR, data.server.error.encode("ascii"))
 
     # override

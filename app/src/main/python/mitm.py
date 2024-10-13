@@ -27,12 +27,9 @@ from mitmproxy import options
 from mitmproxy.tools import dump, cmdline
 from mitmproxy.tools.main import mitmdump, process_options
 from mitmproxy.certs import CertStore, Cert
-from mitmproxy.proxy import server_hooks
-from mitmproxy.proxy.events import OpenConnectionCompleted
 from pcapdroid import PCAPdroid, AddonOpts
 from js_injector import JsInjector
 from pathlib import Path
-import mitmproxy
 import traceback
 import socket
 import asyncio
@@ -68,21 +65,6 @@ sys.stderr = StdErr()
 # no extra newline in logcat
 import builtins
 builtins.print = lambda x, *args, **kargs: sys.stdout.write(str(x))
-
-# Temporary hack to provide a server_error hook
-ConnectionHandler = mitmproxy.proxy.server.ConnectionHandler
-orig_server_event = ConnectionHandler.server_event
-
-def server_event_proxy(handler, event):
-    if pcapdroid and isinstance(event, OpenConnectionCompleted) and event.command.connection:
-        conn = event.command.connection
-        if conn.error:
-            hook_data = server_hooks.ServerConnectionHookData(
-                client=handler.client,
-                server=conn
-            )
-            pcapdroid.server_error(hook_data)
-    return orig_server_event(handler, event)
 
 def load_addon(modname, addons):
     try:
@@ -163,8 +145,6 @@ def run(fd: int, jenabled_addons, addons_home: str, dump_client: bool,
                 args = parser.parse_args(mitm_args.split())
                 process_options(parser, opts, args)
                 checkCertificate()
-
-                ConnectionHandler.server_event = lambda handler, ev: server_event_proxy(handler, ev)
 
                 print("Running mitmdump...")
                 await master.run()
