@@ -4,4 +4,4 @@
 [submodule "submodules/mitmproxy"]
 	path = submodules/mitmproxy
 	url = https://github.com/emanuele-f/mitmproxy
-	branch = pcapdroid-9.0.1
+	branch = pcapdroid-11.0.0
