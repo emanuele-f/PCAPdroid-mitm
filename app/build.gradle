@@ -22,8 +22,8 @@ android {
         applicationId "com.pcapdroid.mitm"
         minSdk 24
         targetSdk 34
-        versionCode 21
-        versionName "1.4"
+        versionCode 22
+        versionName "2.0"
 
         // see productFlavors below
         /*ndk {
