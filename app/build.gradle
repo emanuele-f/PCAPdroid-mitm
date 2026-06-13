@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         applicationId "com.pcapdroid.mitm"
-        minSdk 21
+        minSdk 24
         targetSdk 34
         versionCode 21
         versionName "1.4"
@@ -70,8 +70,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     namespace 'com.pcapdroid.mitm'
 }
