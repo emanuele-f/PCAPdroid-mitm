@@ -19,6 +19,7 @@
 #
 
 import socket
+import ipaddress
 import errno
 import time
 import mitmproxy
@@ -43,6 +44,20 @@ str2lvl = {
 }
 
 SHORT_PAYLOAD_MAX_DIRECTION_SIZE = 512
+
+IPPROTO_TCP = 6
+IPPROTO_UDP = 17
+
+def ip_version(ip: str) -> int:
+    # strip any IPv6 zone id (e.g. fe80::1%eth0) before parsing
+    addr = ipaddress.ip_address(ip.split("%", 1)[0])
+    # IPv4-mapped IPv6 addresses (e.g. ::ffff:1.2.3.4) identify IPv4 connections
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
+        return 4
+    return addr.version
+
+def transport_to_ipproto(transport_protocol: str) -> int:
+    return IPPROTO_UDP if transport_protocol == "udp" else IPPROTO_TCP
 
 class AddonOpts:
     def __init__(self, dump_client, dump_keylog, short_payload):
@@ -97,14 +112,20 @@ class PCAPdroid:
     def send_message(self, tstamp: float, client_conn: mitmproxy.connection.Client,
             server_conn: mitmproxy.connection.Server, payload_type: MsgType, payload: bytes):
         port = 0
+        ipver = 4
+        ipproto = IPPROTO_TCP
         if self.opts.dump_client and client_conn:
             port = client_conn.peername[1]
+            ipver = ip_version(client_conn.peername[0])
+            ipproto = transport_to_ipproto(client_conn.transport_protocol)
         elif not self.opts.dump_client and server_conn:
             port = server_conn.sockname[1]
+            ipver = ip_version(server_conn.sockname[0])
+            ipproto = transport_to_ipproto(server_conn.transport_protocol)
 
         tstamp_millis = int((tstamp or time.time()) * 1000)
 
-        header = "%u:%u:%s:%u\n" % (tstamp_millis, port, payload_type.value, len(payload))
+        header = "%u:%u:%u:%u:%s:%u\n" % (tstamp_millis, ipver, ipproto, port, payload_type.value, len(payload))
 
         try:
             self.sock.sendall(header.encode('ascii'))
