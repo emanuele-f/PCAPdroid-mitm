@@ -19,3 +19,4 @@ app/release/
 app/debug/
 dist/
 keystore
+__pycache__

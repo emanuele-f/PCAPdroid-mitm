@@ -3,5 +3,4 @@
 	url = https://github.com/emanuele-f/chaquopy-wheels
 [submodule "submodules/mitmproxy"]
 	path = submodules/mitmproxy
-	url = https://github.com/emanuele-f/mitmproxy
-	branch = pcapdroid-11.0.0
+	url = https://github.com/mitmproxy/mitmproxy

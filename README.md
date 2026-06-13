@@ -18,14 +18,14 @@ sudo apt install openjdk-17-jdk git
 java --version
 ```
 
-2. Install python 3.10, which is required to correctly build with Chaquopy
+2. Install python 3.13, which is required to correctly build with Chaquopy
 
 ```
 sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt install python3.10 python3.10-distutils
+sudo apt install python3.13
 
-# should print "Python 3.10.x"
-python3.10 --version
+# should print "Python 3.13.x"
+python3.13 --version
 ```
 
 3. Clone the repo
@@ -66,4 +66,12 @@ keytool -genkey -alias key0 -keyalg RSA -keystore keystore -storepass android -k
 
 # The signed apks should be located under `./app/build/outputs/apk`
 # find . -name "*.apk"
+```
+
+To prepare the signed release to be published:
+
+```
+# First build the signed APKs from Android Studio, then run the following
+# command to move them to the "dist" folder
+python make_dist.py
 ```

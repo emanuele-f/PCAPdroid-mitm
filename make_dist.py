@@ -6,9 +6,7 @@ import json
 import shutil
 
 ABI_FLAVORS = {
-  "arm32":  "armeabi-v7a",
   "arm64":  "arm64-v8a",
-  "x86":    "x86",
   "x86_64": "x86_64",
 }
 
@@ -38,7 +36,7 @@ def main():
     release_dir = f"app/{flavor}/release"
 
     if not os.path.exists(release_dir):
-      print(f"{release_dir} does not exist, have you built the app?")
+      print(f"{release_dir} does not exist, have you built the signed APKs?")
       exit(1)
 
     # verify version name

@@ -14,6 +14,10 @@ android {
     }
     compileSdk 34
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.pcapdroid.mitm"
         minSdk 24
@@ -27,9 +31,9 @@ android {
         }*/
 
         python {
-            version "3.10"
+            version "3.13"
             pip {
-                install "../submodules/mitmproxy" // 11.0.0
+                install "../submodules/mitmproxy" // 12.2.3
                 install "beautifulsoup4"
                 options "--find-links", "../submodules/chaquopy-wheels"
             }
@@ -44,17 +48,9 @@ android {
     // https://chaquo.com/chaquopy/doc/current/faq.html#faq-size
     flavorDimensions "abi"
     productFlavors {
-        arm32 {
-            dimension "abi"
-            ndk { abiFilters "armeabi-v7a" }
-        }
         arm64 {
             dimension "abi"
             ndk { abiFilters "arm64-v8a" }
-        }
-        x86 {
-            dimension "abi"
-            ndk { abiFilters "x86" }
         }
         x86_64 {
             dimension "abi"
