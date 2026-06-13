@@ -2,7 +2,7 @@
 
 A [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) addon which uses [mitmproxy](https://mitmproxy.org) to decrypt the TLS/SSL connections and show the decrypted data in the app.
 
-The addon uses the open source framework [chaquopy](https://chaquo.com/chaquopy) to bundle and run python modules. The native python modules are pre-built and installed from the chaquopy [pip repository](https://chaquo.com/pypi-7.0).
+The addon uses the open source framework [chaquopy](https://chaquo.com/chaquopy) to bundle and run python modules. The native python modules are pre-built and installed from the chaquopy [pip repository]([https://chaquo.com/pypi-7.0](https://chaquo.com/pypi-13.1/)) and from the [chaquopy-wheels](https://github.com/emanuele-f/chaquopy-wheels) submodule, see the [mitmproxy branches of my chaquopy fork](https://github.com/emanuele-f/chaquopy/branches/all?query=mitmproxy) for the recipes.
 
 # Build
 
