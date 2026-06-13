@@ -34,3 +34,6 @@ jobs:
 
       - name: Assemble release APKs
         run: ./gradlew assembleRelease --stacktrace
+
+      - name: Check 16 KB alignment of native libraries
+        run: .github/check_16kb_alignment.sh $(find app/build/outputs/apk -name '*.apk')
