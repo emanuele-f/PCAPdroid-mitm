@@ -184,7 +184,7 @@ def stop():
 # Entrypoint: logs a message to console/PCAPdroid
 def log(lvl: int, msg: str):
     if pcapdroid:
-        pcapdroid.do_log(msg, lvl)
+        pcapdroid.log(msg, lvl)
 
 def checkCertificate():
     if os.path.exists(CA_CERT_PATH):
