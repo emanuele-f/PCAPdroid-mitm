@@ -56,6 +56,24 @@ def ip_version(ip: str) -> int:
         return 4
     return addr.version
 
+def assemble_response_with_trailers(response) -> bytes:
+    """Serialise a response whose trailers would otherwise make assemble_response() raise.
+
+    assemble_body() refuses to emit trailers unless the message is chunked, because that is the
+    only legal HTTP/1 framing for them. HTTP/2 and HTTP/3 responses routinely carry trailers --
+    gRPC reports its status there -- and never carry transfer-encoding, so serialising one raises
+    ValueError, the response hook dies, and the response is never dumped at all.
+
+    Serialising a chunked copy keeps the trailers, and costs the receiver nothing: genuinely
+    chunked HTTP/1 responses already reach it unchanged.
+    """
+    if response.trailers and "chunked" not in response.headers.get(
+            "transfer-encoding", "").lower():
+        response = response.copy()
+        response.headers["transfer-encoding"] = "chunked"
+    return assemble_response(response)
+
+
 def transport_to_ipproto(transport_protocol: str) -> int:
     return IPPROTO_UDP if transport_protocol == "udp" else IPPROTO_TCP
 
@@ -197,7 +215,7 @@ class PCAPdroid:
                 self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn,
                                   MsgType.JS_INJECTED, flow.js_injector_scripts.encode("ascii"))
 
-            data = self.checkPayload(flow, assemble_response(flow.response), req=False)
+            data = self.checkPayload(flow, assemble_response_with_trailers(flow.response), req=False)
             if data:
                 self.send_message(flow.response.timestamp_start, flow.client_conn, flow.server_conn, MsgType.HTTP_REPLY, data)
 
