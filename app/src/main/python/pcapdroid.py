@@ -25,7 +25,11 @@ import time
 import mitmproxy
 import traceback
 from mitmproxy import http, ctx
-from mitmproxy.net.http.http1.assemble import assemble_request, assemble_response
+from mitmproxy.net.http.http1.assemble import (
+    assemble_request_head,
+    assemble_response_head,
+    assemble_body,
+)
 from mitmproxy.proxy import server_hooks
 from mitmproxy.log import LogEntry
 from enum import Enum
@@ -58,6 +62,27 @@ def ip_version(ip: str) -> int:
 
 def transport_to_ipproto(transport_protocol: str) -> int:
     return IPPROTO_UDP if transport_protocol == "udp" else IPPROTO_TCP
+
+def _assemble_message(message, head: bytes) -> bytes:
+    data = message.data
+    if data.trailers and "chunked" not in data.headers.get("transfer-encoding", "").lower():
+        # HTTP/2 and HTTP/3 carry trailers without transfer-encoding: chunked, which
+        # mitmproxy's assemble_body() refuses to serialize. Fold the trailer headers
+        # into the regular header block, producing a valid HTTP/1.1 message
+        head = head[:-2] + bytes(data.trailers) + b"\r\n"
+        return head + data.content
+
+    return head + b"".join(assemble_body(data.headers, [data.content], data.trailers))
+
+def assemble_request(request) -> bytes:
+    if request.data.content is None:
+        raise ValueError("Cannot assemble flow with missing content")
+    return _assemble_message(request, assemble_request_head(request))
+
+def assemble_response(response) -> bytes:
+    if response.data.content is None:
+        raise ValueError("Cannot assemble flow with missing content")
+    return _assemble_message(response, assemble_response_head(response))
 
 class AddonOpts:
     def __init__(self, dump_client, dump_keylog, short_payload):
