@@ -143,6 +143,10 @@ def run(fd: int, jenabled_addons, addons_home: str, dump_client: bool,
                 print("mitmdump " + mitm_args)
                 parser = cmdline.mitmdump(opts)
                 args = parser.parse_args(mitm_args.split())
+                # mitmproxy.tools.main.run() applies --set via opts.set(*args.setoptions,
+                # defer=True) before process_options(); this embedded runner never did, so any
+                # addon-registered --set option silently kept its default.
+                opts.set(*args.setoptions, defer=True)
                 process_options(parser, opts, args)
                 checkCertificate()
 
