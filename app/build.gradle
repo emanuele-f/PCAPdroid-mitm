@@ -20,9 +20,9 @@ android {
 
     defaultConfig {
         applicationId "com.pcapdroid.mitm"
-        minSdk 25
+        minSdk 24
         targetSdk 34
-        versionCode 24
+        versionCode 25
         versionName "2.3"
 
         // see productFlavors below
