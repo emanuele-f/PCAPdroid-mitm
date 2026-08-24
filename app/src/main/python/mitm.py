@@ -35,6 +35,13 @@ import socket
 import asyncio
 import sys
 import importlib
+import mitmproxy.platform
+
+# Python 3.13 reports sys.platform as "android" rather than "linux", so mitmproxy
+# fails to detect transparent mode support even though SO_ORIGINAL_DST works.
+if (sys.platform == "android") and (mitmproxy.platform.original_addr is None):
+    from mitmproxy.platform import linux
+    mitmproxy.platform.original_addr = linux.original_addr
 
 master = None
 pcapdroid = None
