@@ -11,7 +11,7 @@ Build on Windows is not currently supported.
 
 1. Install Java 17 and git
 
-```
+```shell
 sudo apt install openjdk-17-jdk git
 
 # should print "openjdk 17.x"
@@ -20,7 +20,7 @@ java --version
 
 2. Install python 3.13, which is required to correctly build with Chaquopy
 
-```
+```shell
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt install python3.13
 
@@ -30,7 +30,7 @@ python3.13 --version
 
 3. Clone the repo
 
-```
+```shell
 git clone https://github.com/emanuele-f/PCAPdroid-mitm
 cd PCAPdroid-mitm
 git submodule update --init
@@ -38,7 +38,7 @@ git submodule update --init
 
 4. Install the Android SDK. These instructions assume you will work from the CLI, however you can do the same via Android Studio, which will make installing and managing SDK versions easier.
 
-```
+```shell
 # 1. Grab the latest "Command line tools only" for linux from https://developer.android.com/studio,
 wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 unzip commandlinetools-linux-11076708_latest.zip
@@ -55,13 +55,13 @@ sdkmanager "platforms;android-34" "extras;google;m2repository" "extras;android;m
 
 5. Create keystore for signing
 
-```
+```shell
 keytool -genkey -alias key0 -keyalg RSA -keystore keystore -storepass android -keypass android -dname "CN=Unknown, OU=Unknown, O=Unknown, C=Unknown"
 ```
 
 6. Build release
 
-```
+```shell
 ./gradlew assembleRelease
 
 # The signed apks should be located under `./app/build/outputs/apk`
@@ -70,7 +70,7 @@ keytool -genkey -alias key0 -keyalg RSA -keystore keystore -storepass android -k
 
 To prepare the signed release to be published:
 
-```
+```shell
 # First build the signed APKs from Android Studio, then run the following
 # command to move them to the "dist" folder
 python make_dist.py
