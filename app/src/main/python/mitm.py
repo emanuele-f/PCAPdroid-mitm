@@ -35,7 +35,9 @@ import socket
 import asyncio
 import sys
 import importlib
+import logging
 import mitmproxy.platform
+from mitmproxy import log as mitmlog
 
 # Python 3.13 reports sys.platform as "android" rather than "linux", so mitmproxy
 # fails to detect transparent mode support even though SO_ORIGINAL_DST works.
@@ -92,6 +94,12 @@ def load_addon(modname, addons):
         sys.stderr.write("Failed to load addon \"" + modname + "\"")
         sys.stderr.write(traceback.format_exc())
 
+def remove_stale_log_handlers():
+    root = logging.getLogger()
+    for h in list(root.handlers):
+        if isinstance(h, mitmlog.MitmLogHandler):
+            root.removeHandler(h)
+
 def jarray_to_set(arr):
     rv = set()
     for elem in arr:
@@ -112,6 +120,7 @@ def run(fd: int, jenabled_addons, addons_home: str, dump_client: bool,
             async def main():
                 global master
                 global pcapdroid, js_injector
+                remove_stale_log_handlers()
                 opts = options.Options()
                 master = dump.DumpMaster(opts)
 
@@ -158,19 +167,20 @@ def run(fd: int, jenabled_addons, addons_home: str, dump_client: bool,
                 checkCertificate()
 
                 print("Running mitmdump...")
-                await master.run()
-
-                # The proxyserver is not stopped by master.shutdown. Must be
-                # stopped to properly close the TCP socket.
-                proxyserver = master.addons.lookup.get("proxyserver")
-                if proxyserver:
-                    # see test_proxyserver.py
-                    print("Stopping proxyserver...")
-                    master.options.update(server=False)
-                    await proxyserver.setup_servers()
+                try:
+                    await master.run()
+                finally:
+                    # The proxyserver is not stopped by master.shutdown. Must be
+                    # stopped to properly close the TCP socket.
+                    proxyserver = master.addons.lookup.get("proxyserver")
+                    if proxyserver:
+                        # see test_proxyserver.py
+                        print("Stopping proxyserver...")
+                        master.options.update(server=False)
+                        await proxyserver.setup_servers()
 
             asyncio.run(main())
-    except Exception:
+    except (Exception, SystemExit):
         print(traceback.format_exc())
 
     print("mitmdump stopped")
