@@ -33,7 +33,7 @@ android {
         python {
             version "3.13"
             pip {
-                install "../submodules/mitmproxy" // 12.3.0
+                install "../submodules/mitmproxy" // 12.3.1
                 install "beautifulsoup4"
                 options "--find-links", "../submodules/chaquopy-wheels"
             }
